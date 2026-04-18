@@ -216,6 +216,7 @@ export default function App() {
         body: JSON.stringify({
           model: selectedModel,
           skipSlop: skipSlop,
+          userName: user.displayName || 'Unknown User',
           messages: newMessages.map(m => ({ role: m.role, content: m.content }))
         })
       });
