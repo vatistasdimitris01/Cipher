@@ -3,7 +3,41 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <title>Cipher</title>
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Cipher | ShadowNet Access Protocol" />
+    <meta name="description" content="Cipher is a next-generation conversational AI interface. Authenticate via ShadowNet to access the Oracle and bypass conversational filler." />
+    <meta name="keywords" content="Cipher, AI, Assistant, Chatbot, ShadowNet, Expert AI, Secure Chat" />
+    <meta name="author" content="ShadowNet" />
+    <meta name="theme-color" content="#212121" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Cipher | ShadowNet Access Protocol" />
+    <meta property="og:description" content="Cipher is a next-generation conversational AI interface. Authenticate via ShadowNet to access the Oracle and bypass conversational filler." />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="Cipher | ShadowNet Access Protocol" />
+    <meta property="twitter:description" content="Cipher is a next-generation conversational AI interface. Authenticate via ShadowNet to access the Oracle and bypass conversational filler." />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- PWA Installation -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+             console.log('Service Worker failed to setup.', err);
+          });
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

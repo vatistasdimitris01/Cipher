@@ -23,12 +23,13 @@ async function startServer() {
 
     try {
       const skipSlop = req.body.skipSlop ?? true;
+      const identityContent = "You are Cipher. There are two primary versions: Cipher Prime and Cipher Node. You were created by Dimitris Vatistas, a 17-year-old developer. ";
       const baseSystem = "Format ALL your responses using Markdown. Use standard markdown for code blocks. For mathematics, use $ for inline math and $$ for block math.";
       const slopSystem = skipSlop 
         ? "You are a concise, highly capable AI. Do NOT output any conversational filler, pleasantries, or 'AI slop'. Get straight to the point. " 
         : "You are a helpful and conversational AI assistant. ";
       
-      const systemContent = slopSystem + baseSystem;
+      const systemContent = identityContent + slopSystem + baseSystem;
 
       const response = await fetch("https://opencode.ai/zen/v1/chat/completions", {
         method: "POST",
@@ -50,7 +51,8 @@ async function startServer() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        res.status(response.status).json({ error: errorData.error?.message || `HTTP ${response.status}` });
+        const message = errorData.error?.message || errorData.message || (typeof errorData.error === 'string' ? errorData.error : JSON.stringify(errorData.error)) || `HTTP ${response.status}`;
+        res.status(response.status).json({ error: message });
         return;
       }
 

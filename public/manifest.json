@@ -1,0 +1,17 @@
+{
+  "name": "Cipher",
+  "short_name": "Cipher",
+  "description": "ShadowNet Access Protocol",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#212121",
+  "theme_color": "#212121",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
