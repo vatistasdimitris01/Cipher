@@ -1,6 +1,6 @@
 {
-  "name": "Static Chat UI",
-  "description": "A static chat interface as requested, without AI logic.",
-  "requestFramePermissions": [],
+  "name": "Cipher Intelligence",
+  "description": "Premium multi-modal intelligence protocol with deep black theme and mobile optimization.",
+  "requestFramePermissions": ["geolocation"],
   "majorCapabilities": []
 }

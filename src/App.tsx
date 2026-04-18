@@ -73,7 +73,45 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState('nemotron-3-super-free');
   const [skipSlop, setSkipSlop] = useState(true);
   const [settingsTab, setSettingsTab] = useState<'account' | 'cipher' | 'appearance'>('account');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [locationSyncing, setLocationSyncing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+
+  const handleLocationSync = () => {
+    setLocationSyncing(true);
+    if (!navigator.geolocation) {
+       alert("Neural position protocol not supported by this node.");
+       setLocationSyncing(false);
+       return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        // We could store the coords, but for now we just acknowledge the sync
+        localStorage.setItem('cipher_onboarded', 'true');
+        localStorage.setItem('cipher_last_lat', pos.coords.latitude.toString());
+        localStorage.setItem('cipher_last_lng', pos.coords.longitude.toString());
+        setShowOnboarding(false);
+        setLocationSyncing(false);
+      },
+      (err) => {
+        console.error("Location sync error:", err);
+        alert("Authorization denied. Standard sync required.");
+        setLocationSyncing(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  useEffect(() => {
+    if (user && !isPWA) {
+      const onboarded = localStorage.getItem('cipher_onboarded');
+      if (!onboarded) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [user, isPWA]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -206,13 +244,30 @@ export default function App() {
   const handleSend = async () => {
     if (!input.trim() || isLoading || !user || isChatEnded) return;
     
-    if (!(await checkAndIncrementUsage(user.uid))) return;
-
+    // 1. Optimistic UI update - happens instantly
     const userMsg = { role: 'user', content: input };
+    const currentInput = input;
     const newMessages = [...messages, userMsg];
+    
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
+
+    // 2. Perform usage check in background or via local state check first
+    const today = new Date().toISOString().split('T')[0];
+    if (dailyUsage >= CREDITS_LIMIT) {
+        setLimitWarning(`Protocol access suspended: Maximum daily credits (${CREDITS_LIMIT}) reached. Resets at midnight.`);
+        setTimeout(() => setLimitWarning(null), 5000);
+        
+        // Revert UI if blocked
+        setMessages(messages);
+        setInput(currentInput);
+        setIsLoading(false);
+        return;
+    }
+
+    // 3. Fire-and-forget the increment to not block the chat request
+    checkAndIncrementUsage(user.uid);
 
     abortControllerRef.current = new AbortController();
 
@@ -482,10 +537,10 @@ export default function App() {
   const blurBg = theme === 'dark' ? 'bg-pitch-black/80' : 'bg-[#fff]/80';
 
   return (
-    <div className={`font-sans h-screen flex flex-col relative overflow-hidden overscroll-none transition-colors ${bgMain}`}>
+    <div className={`font-sans h-screen flex flex-col relative overflow-hidden overscroll-none transition-colors pt-[env(safe-area-inset-top)] ${bgMain}`}>
         
         {/* Top Left Menu Icons */}
-        <div className="absolute top-4 left-4 z-20">
+        <div className="absolute top-[calc(1rem+env(safe-area-inset-top))] left-4 z-20">
           <button 
             onClick={() => setIsHistoryOpen(true)}
             className={`cursor-pointer p-2 rounded-full transition-colors ${iconColor}`}
@@ -503,7 +558,7 @@ export default function App() {
         </div>
 
         {/* Top Right Menu Icons */}
-        <div className="absolute top-4 right-4 flex gap-2 z-20">
+        <div className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 flex gap-2 z-20">
           <button 
             onClick={startNewChat}
             className={`cursor-pointer p-2 rounded-full transition-colors ${iconColor}`}
@@ -851,6 +906,63 @@ export default function App() {
               </div>
             </motion.div>
           </div>
+          )}
+        </AnimatePresence>
+
+        {/* Onboarding Overlay */}
+        <AnimatePresence>
+          {showOnboarding && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-6">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="max-w-md w-full text-center"
+              >
+                <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-8 ${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                  <Shield size={32} />
+                </div>
+                
+                <h2 className="text-3xl font-bold tracking-tight mb-4">Neural Entry Detected</h2>
+                <p className="text-gray-400 mb-8 leading-relaxed">
+                  Welcome to Cipher. Protocol requires a verified physical node synchronization to proceed.
+                </p>
+                
+                <div className="mb-10">
+                   <button 
+                     disabled={locationSyncing}
+                     onClick={handleLocationSync}
+                     className={`w-full py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 font-medium ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'} disabled:opacity-50`}
+                   >
+                     {locationSyncing ? (
+                        <div className="flex items-center gap-2">
+                           <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                           <span>Calculating...</span>
+                        </div>
+                     ) : (
+                        <>
+                           <Shield size={20} />
+                           <span>Authorize Neural Sync</span>
+                        </>
+                     )}
+                   </button>
+                </div>
+
+                <div className="pt-6 border-t border-white/5 text-left">
+                   <p className="text-xs font-mono uppercase tracking-widest text-blue-500 mb-4 text-center">PWA Protocol</p>
+                   <div className="bg-[#111] p-4 rounded-2xl text-[13px] text-gray-400 space-y-3">
+                      <p>For a seamless fullscreen interface:</p>
+                      <div className="flex items-start gap-3">
+                         <div className="p-1.5 bg-white/10 rounded-lg shrink-0">iOS</div>
+                         <p>Tap <Copy size={12} className="inline mx-1"/> Share, then <span className="text-white">"Add to Home Screen"</span></p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                         <div className="p-1.5 bg-white/10 rounded-lg shrink-0">Android</div>
+                         <p>Tap <MoreHorizontal size={12} className="inline mx-1"/> Menu, then <span className="text-white">"Install App"</span></p>
+                      </div>
+                   </div>
+                </div>
+              </motion.div>
+            </div>
           )}
         </AnimatePresence>
     </div>
