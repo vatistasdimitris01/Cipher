@@ -81,8 +81,8 @@ export default function App() {
       metaTheme.setAttribute('name', 'theme-color');
       document.head.appendChild(metaTheme);
     }
-    metaTheme.setAttribute("content", theme === 'dark' ? '#212121' : '#ffffff');
-    document.body.style.backgroundColor = theme === 'dark' ? '#212121' : '#ffffff';
+    metaTheme.setAttribute("content", theme === 'dark' ? '#080808' : '#ffffff');
+    document.body.style.backgroundColor = theme === 'dark' ? '#080808' : '#ffffff';
   }, [theme]);
 
   useEffect(() => {
@@ -324,50 +324,53 @@ export default function App() {
   };
 
   // Theme styles
-  const bgMain = theme === 'dark' ? 'bg-[#212121] text-[#ececec]' : 'bg-[#fff] text-[#111827]';
-  const iconColor = theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-900';
-  const userBubble = theme === 'dark' ? 'bg-[#2f2f2f] text-white' : 'bg-gray-100 text-gray-900';
+  const bgMain = theme === 'dark' ? 'bg-pitch-black text-[#ececec]' : 'bg-[#fff] text-[#111827]';
+  const iconColor = theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-gray-900';
+  const userBubble = theme === 'dark' ? 'bg-[#1a1a1a] text-white border border-[#242424]' : 'bg-gray-100 text-gray-900';
   const aiText = theme === 'dark' ? 'text-[#ececec] markdown-body' : 'text-gray-900 markdown-body';
-  const inputCont = theme === 'dark' ? 'bg-[#2f2f2f]' : 'bg-gray-200';
+  const inputCont = theme === 'dark' ? 'bg-[#121212] border border-[#242424]' : 'bg-gray-200';
   const inputClass = theme === 'dark' ? 'text-white' : 'text-gray-900';
   const btnActive = theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800';
-  const btnInactive = theme === 'dark' ? 'bg-[#424242] text-[#676767]' : 'bg-[#e4e4e7] text-[#a1a1aa]';
+  const btnInactive = theme === 'dark' ? 'bg-[#1a1a1a] text-[#444]' : 'bg-[#e4e4e7] text-[#a1a1aa]';
 
   if (authLoading) {
-    return <div className={`h-screen flex items-center justify-center ${bgMain}`}>Loading...</div>;
+    return <div className={`h-screen flex items-center justify-center ${bgMain} font-mono tracking-widest text-xs opacity-50 uppercase`}>Initializing Protocol...</div>;
   }
 
   if (!user) {
     return (
-      <div className={`h-screen flex items-center justify-center ${bgMain}`}>
+      <div className={`h-screen flex flex-col items-center justify-center ${bgMain} px-6`}>
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className={`relative p-10 rounded-3xl max-w-md w-full text-center overflow-hidden ${theme === 'dark' ? 'bg-[#151515] border border-blue-900/30 shadow-[0_0_80px_rgba(30,58,138,0.15)]' : 'bg-white border border-gray-200 shadow-2xl'}`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col items-center w-full max-w-sm"
         >
-          {theme === 'dark' && (
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50 blur-sm"></div>
-          )}
-          
-          <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg ${theme === 'dark' ? 'bg-[#1f1f1f] border border-[#333]' : 'bg-gray-50 border border-gray-100'}`}>
-            <Shield className={theme === 'dark' ? 'text-blue-500' : 'text-blue-600'} size={32} />
+          <div className="mb-12">
+             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}>
+                <Shield size={24} />
+             </div>
           </div>
-          
-          <h1 className="text-3xl font-bold tracking-tight mb-3">ShadowNet</h1>
-          <p className={`mb-10 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-            Access Protocol Level 4 required.<br/>
-            Please authenticate to connect to the Oracle.
-          </p>
-          
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+
+          <div className="text-center mb-12">
+            <h1 className="text-2xl font-semibold tracking-[-0.03em] mb-2">Cipher Intelligence</h1>
+            <p className={`text-sm tracking-tight ${theme === 'dark' ? 'text-gray-500 font-light' : 'text-gray-500'}`}>
+              Connect to the neural network to begin synthesis.
+            </p>
+          </div>
+
+          <button 
             onClick={handleLogin}
-            className={`w-full py-3.5 px-4 rounded-xl font-medium tracking-wide flex items-center justify-center gap-3 transition-colors ${theme === 'dark' ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.2)]' : 'bg-black text-white hover:bg-gray-800'}`}
+            className={`group relative w-full h-12 rounded-full overflow-hidden transition-all duration-300 flex items-center justify-center gap-3 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
           >
-            Authenticate via Google
-          </motion.button>
+            <span className="font-medium text-sm">Continue with Google</span>
+          </button>
+
+          <div className="mt-12 flex items-center gap-4 opacity-20 pointer-events-none">
+             <div className={`h-[1px] w-8 ${theme === 'dark' ? 'bg-white' : 'bg-black'}`}></div>
+             <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Secure Node 04</span>
+             <div className={`h-[1px] w-8 ${theme === 'dark' ? 'bg-white' : 'bg-black'}`}></div>
+          </div>
         </motion.div>
       </div>
     );
@@ -468,7 +471,7 @@ export default function App() {
     executeSelectChat(chat);
   };
 
-  const blurBg = theme === 'dark' ? 'bg-[#212121]/80' : 'bg-[#fff]/80';
+  const blurBg = theme === 'dark' ? 'bg-pitch-black/80' : 'bg-[#fff]/80';
 
   return (
     <div className={`font-sans h-screen flex flex-col relative overflow-hidden transition-colors ${bgMain}`}>
@@ -570,7 +573,7 @@ export default function App() {
                        setMessages([]);
                        setIsChatEnded(false);
                      }}
-                     className={`px-6 py-2.5 rounded-full flex items-center justify-center text-sm font-medium transition-colors shadow-sm ${theme === 'dark' ? 'bg-[#2a2a2a] text-gray-300 border border-[#333] hover:bg-[#333]' : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'}`}
+                     className={`px-6 py-2.5 rounded-full flex items-center justify-center text-sm font-medium transition-colors shadow-sm ${theme === 'dark' ? 'bg-[#2a2a2a] text-gray-300 border border-transparent hover:bg-[#333]' : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'}`}
                    >
                      <span>Cipher ended this convo. Click here to start a new chat.</span>
                    </button>
@@ -612,7 +615,7 @@ export default function App() {
                    <motion.div 
                      initial={{ scale: 0.95, y: 10 }}
                      animate={{ scale: 1, y: 0 }}
-                     className={`w-full max-w-sm rounded-3xl p-6 shadow-2xl border ${theme === 'dark' ? 'bg-[#1a1a1a] border-[#333]' : 'bg-white border-gray-200'}`}
+                     className={`w-full max-w-sm rounded-3xl p-6 shadow-2xl border ${theme === 'dark' ? 'bg-[#1a1a1a] border-transparent' : 'bg-white border-gray-200'}`}
                    >
                      <h3 className={`text-lg font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Interrupt Cipher?</h3>
                      <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -646,7 +649,7 @@ export default function App() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                className={`flex flex-col w-full md:w-5/6 lg:w-3/5 max-w-3xl rounded-3xl overflow-hidden shadow-2xl relative ${theme === 'dark' ? 'bg-[#151515] text-white border border-[#333]' : 'bg-white text-gray-900 border border-gray-200'}`}
+                className={`flex flex-col w-full md:w-5/6 lg:w-3/5 max-w-3xl rounded-3xl overflow-hidden shadow-2xl relative ${theme === 'dark' ? 'bg-pitch-black text-white border border-transparent' : 'bg-white text-gray-900 border border-gray-200'}`}
               >
                 {/* Search Bar */}
                 <div className="flex items-center gap-3 px-5 h-14 shrink-0">
@@ -677,7 +680,7 @@ export default function App() {
                         chatHistory
                         .filter(c => c.title?.toLowerCase().includes(searchQuery.toLowerCase()))
                         .map((chat) => (
-                        <div key={chat.id} onClick={() => selectChat(chat)} className={`h-[38px] rounded-xl flex items-center justify-between px-3 cursor-pointer transition-colors group ${currentChatId === chat.id ? (theme === 'dark' ? 'bg-[#2a2a2a]' : 'bg-gray-200') : (theme === 'dark' ? 'hover:bg-[#252525]' : 'hover:bg-gray-100')}`}>
+                        <div key={chat.id} onClick={() => selectChat(chat)} className={`h-[38px] rounded-xl flex items-center justify-between px-3 cursor-pointer transition-colors group ${currentChatId === chat.id ? (theme === 'dark' ? 'bg-cipher-grey' : 'bg-gray-200') : (theme === 'dark' ? 'hover:bg-cipher-grey/50' : 'hover:bg-gray-100')}`}>
                            <span className="truncate text-[14px] flex-grow">{chat.title || 'New Chat'}</span>
                            <div className="flex items-center gap-2 ml-3 flex-shrink-0">
                                <span className={`text-[11px] whitespace-nowrap ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -710,7 +713,7 @@ export default function App() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
                 transition={{ duration: 0.2 }}
-                className={`flex flex-col w-full md:w-5/6 lg:w-3/5 max-w-3xl rounded-3xl overflow-hidden shadow-2xl relative ${theme === 'dark' ? 'bg-[#151515] text-white border border-[#333]' : 'bg-white text-gray-900 border border-gray-200'}`}
+                className={`flex flex-col w-full md:w-5/6 lg:w-3/5 max-w-3xl rounded-3xl overflow-hidden shadow-2xl relative ${theme === 'dark' ? 'bg-pitch-black text-white border border-transparent' : 'bg-white text-gray-900 border border-gray-200'}`}
               >
                 <div className="flex justify-between items-center p-6 pb-2 shrink-0">
                   <div className="flex items-center gap-2">
@@ -723,7 +726,7 @@ export default function App() {
                 </div>
 
                 {/* Tabs */}
-              <div className={`flex px-6 pt-4 space-x-6 border-b ${theme === 'dark' ? 'border-[#333]' : 'border-gray-200'}`}>
+              <div className={`flex px-6 pt-4 space-x-6 border-b ${theme === 'dark' ? 'border-transparent' : 'border-gray-200'}`}>
                 <button 
                   onClick={() => setSettingsTab('account')}
                   className={`pb-3 text-sm font-medium transition-colors border-b-2 ${settingsTab === 'account' ? (theme === 'dark' ? 'border-blue-500 text-blue-400' : 'border-blue-500 text-blue-600') : 'border-transparent text-gray-500 hover:text-gray-400'}`}
@@ -760,7 +763,7 @@ export default function App() {
                     <p className={`text-sm md:text-base mt-0.5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{user.email}</p>
                     
                     {/* Credits Display */}
-                    <div className={`mt-8 w-full max-w-sm rounded-2xl p-5 border ${theme === 'dark' ? 'bg-[#1f1f1f] border-[#333]' : 'bg-white border-gray-200 shadow-sm'}`}>
+                    <div className={`mt-8 w-full max-w-sm rounded-2xl p-5 border ${theme === 'dark' ? 'bg-[#0f0f0f] border-transparent' : 'bg-white border-gray-200 shadow-sm'}`}>
                        <div className="flex justify-between items-end mb-2">
                          <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Daily Credits</span>
                          <span className="text-2xl font-bold text-blue-500">{CREDITS_LIMIT - dailyUsage} <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>/ {CREDITS_LIMIT}</span></span>
@@ -792,7 +795,7 @@ export default function App() {
                             className={`flex items-center justify-between p-3 rounded-xl border text-left text-sm transition-colors ${
                               selectedModel === m.id 
                                 ? (theme === 'dark' ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-blue-500 bg-blue-50 text-blue-700')
-                                : (theme === 'dark' ? 'border-gray-700 hover:bg-[#2f2f2f]' : 'border-gray-200 hover:bg-gray-50')
+                                : (theme === 'dark' ? 'border-cipher-border hover:bg-cipher-grey' : 'border-gray-200 hover:bg-gray-50')
                             }`}
                           >
                             {m.name}
