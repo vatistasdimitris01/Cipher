@@ -73,6 +73,14 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState('nemotron-3-super-free');
   const [skipSlop, setSkipSlop] = useState(true);
   const [settingsTab, setSettingsTab] = useState<'account' | 'cipher' | 'appearance'>('account');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [input]);
 
   useEffect(() => {
     let metaTheme = document.querySelector('meta[name="theme-color"]');
@@ -474,7 +482,7 @@ export default function App() {
   const blurBg = theme === 'dark' ? 'bg-pitch-black/80' : 'bg-[#fff]/80';
 
   return (
-    <div className={`font-sans h-screen flex flex-col relative overflow-hidden transition-colors ${bgMain}`}>
+    <div className={`font-sans h-screen flex flex-col relative overflow-hidden overscroll-none transition-colors ${bgMain}`}>
         
         {/* Top Left Menu Icons */}
         <div className="absolute top-4 left-4 z-20">
@@ -530,7 +538,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* Chat Area - Added bottom padding so last message clears the input bar */}
-        <div className="flex-1 overflow-y-auto flex flex-col items-center pt-24 px-4 pb-40 w-full relative z-0">
+        <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col items-center pt-24 px-4 pb-40 w-full relative z-0 overscroll-contain">
             <div className="w-full max-w-3xl flex flex-col gap-8">
                 {messages.map((msg, idx) => (
                     msg.role === 'user' ? (
@@ -581,20 +589,26 @@ export default function App() {
               )}
             </AnimatePresence>
 
-            <div className={`w-full max-w-3xl rounded-full flex items-center pl-6 pr-2 py-2 transition-colors ${inputCont} ${isChatEnded ? 'opacity-50 pointer-events-none' : ''}`}>
-                <input
-                    type="text"
+            <div className={`w-full max-w-3xl flex items-end pl-6 pr-2 py-2 transition-all duration-300 ${inputCont} ${isChatEnded ? 'opacity-50 pointer-events-none' : ''} ${input.includes('\n') || (textareaRef.current && textareaRef.current.scrollHeight > 44) ? 'rounded-[24px]' : 'rounded-full'}`}>
+                <textarea
+                    ref={textareaRef}
+                    rows={1}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                        }
+                    }}
                     disabled={isLoading || isChatEnded}
-                    className={`bg-transparent border-none outline-none flex-1 text-[16px] ${inputClass} disabled:cursor-not-allowed`}
+                    className={`bg-transparent border-none outline-none flex-1 text-[16px] py-1.5 resize-none no-scrollbar leading-[1.4] ${inputClass} disabled:cursor-not-allowed`}
                     placeholder={isChatEnded ? "Protocol Terminated..." : "Message Cipher..."}
                 />
                 <button
                     onClick={handleSend}
                     disabled={!input.trim() || isLoading || isChatEnded}
-                    className={`rounded-full w-9 h-9 flex items-center justify-center ml-2 flex-shrink-0 transition-colors ${
+                    className={`rounded-full w-9 h-9 flex items-center justify-center ml-2 mb-0.5 flex-shrink-0 transition-colors ${
                         (input.trim() && !isLoading && !isChatEnded) ? `${btnActive} cursor-pointer` : `${btnInactive} cursor-not-allowed`
                     }`}
                 >
@@ -671,7 +685,7 @@ export default function App() {
 
                 {/* List Area */}
                 <div className="w-full relative py-2" style={{ height: 'min(460px, calc(100dvh - 136px))' }}>
-                  <div className="h-full overflow-y-auto px-2 space-y-4">
+                  <div className="h-full overflow-y-auto no-scrollbar px-2 space-y-4 overscroll-contain">
                     
                     <div className="flex flex-col gap-0.5">
                       {chatHistory.length === 0 ? (
@@ -748,7 +762,7 @@ export default function App() {
               </div>
 
               {/* Tab Content */}
-              <div className="p-6 overflow-y-auto" style={{ height: 'min(460px, calc(100dvh - 136px))' }}>
+              <div className="p-6 overflow-y-auto no-scrollbar overscroll-contain" style={{ height: 'min(460px, calc(100dvh - 136px))' }}>
                 
                 {settingsTab === 'account' && user && (
                   <div className="flex flex-col items-center py-6 md:py-2">
