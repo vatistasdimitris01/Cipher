@@ -3,6 +3,21 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+if (serviceAccountKey && getApps().length === 0) {
+  try {
+    const serviceAccount = JSON.parse(serviceAccountKey);
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+  } catch (e) {
+    console.error("Failed to initialize Firebase Admin:", e);
+  }
+}
 
 async function startServer() {
   const app = express();
@@ -75,6 +90,96 @@ async function startServer() {
     const db = await loadDB();
     res.json({ servers: Object.entries(db.mcpServers).map(([k, v]) => ({ id: k, ...v as any })) });
   });
+
+  // --- DEVICE AUTH ENDPOINTS ---
+  // GET /api/auth/verify?code=XXXX-XXX - Polled by CLI
+  app.get('/api/auth/verify', async (req, res) => {
+    const code = req.query.code as string;
+    if (!code) {
+      return res.json({ verified: false, error: 'Code required' });
+    }
+    
+    try {
+      const dbAdmin = getFirestore();
+      const docSnap = await dbAdmin.collection('auth_requests').doc(code).get();
+      
+      if (!docSnap.exists) {
+        return res.json({ verified: false, error: 'Code not found' });
+      }
+      
+      const data = docSnap.data();
+      
+      if (data?.status === 'verified') {
+        let memory = '';
+        if (data.uid) {
+          const userSnap = await dbAdmin.collection('users').doc(data.uid).get();
+          memory = userSnap.data()?.memory || '';
+        }
+        
+        // Delete the auth request after verification
+        await dbAdmin.collection('auth_requests').doc(code).delete();
+        
+        return res.json({
+          verified: true,
+          uid: data.uid,
+          email: data.email,
+          name: data.name,
+          memory
+        });
+      }
+      
+      return res.json({ verified: false, status: data?.status || 'pending' });
+    } catch (error) {
+      res.status(500).json({ verified: false, error: (error as Error).message });
+    }
+  });
+
+  // PUT /api/auth/verify - Called by web page after user confirms
+  app.put('/api/auth/verify', async (req, res) => {
+    try {
+      const { code, uid, email, name } = req.body;
+      if (!code || !uid) {
+        return res.json({ success: false, error: 'Missing code or uid' });
+      }
+      
+      const dbAdmin = getFirestore();
+      await dbAdmin.collection('auth_requests').doc(code).set({
+        status: 'verified',
+        uid,
+        email,
+        name: name || email?.split('@')[0],
+        verifiedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: (error as Error).message });
+    }
+  });
+
+  // POST /api/auth/verify - Create new auth request (optional)
+  app.post('/api/auth/verify', async (req, res) => {
+    try {
+      const { code: providedCode } = req.body;
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const generateCode = () => 'CIPH-' + 
+        chars[Math.floor(Math.random() * chars.length)] + '-' +
+        Array(3).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join('');
+      
+      const code = providedCode || generateCode();
+      const dbAdmin = getFirestore();
+      await dbAdmin.collection('auth_requests').doc(code).set({
+        status: 'pending',
+        createdAt: FieldValue.serverTimestamp(),
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+      });
+      
+      res.json({ code, status: 'pending' });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+  // -----------------------------
 
 
   // Helper for actual chat interactions (both internal UI and external devs)

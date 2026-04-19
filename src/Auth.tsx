@@ -1,58 +1,97 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from './firebase';
-import { Fingerprint, ArrowLeft, ShieldCheck, Globe, Zap } from 'lucide-react';
+import { db, auth } from './firebase';
+import { doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { Fingerprint, ArrowLeft, ShieldCheck, Globe, Zap, Smartphone } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const provider = new GoogleAuthProvider();
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const code = searchParams.get('code');
+  
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<string>('pending');
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       setLoading(false);
-      if (currentUser) {
-        // Automatically redirect to chat or portal if already logged in
-        setTimeout(() => navigate('/chat'), 1500);
-      }
     });
     return () => unsubscribe();
-  }, [navigate]);
+  }, []);
 
-  const handleLogin = async () => {
+  // Auto-verify if user is already logged in and code exists
+  useEffect(() => {
+    if (user && code && status === 'pending') {
+      verifyDevice(code);
+    }
+  }, [user, code]);
+
+  const handleGoogleLogin = async () => {
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Authentication failed:", error);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const verifyDevice = async (deviceCode: string) => {
+    if (!user) return;
+    setStatus('verifying');
+    
+    try {
+      // Direct call to Firestore from client as in snippet
+      await setDoc(doc(db, 'auth_requests', deviceCode), {
+        status: 'verified',
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || user.email?.split('@')[0],
+        verifiedAt: serverTimestamp()
+      }, { merge: true });
+      
+      setStatus('verified');
+      
+      // Auto-close or redirect
+      setTimeout(() => {
+        if (window.opener) {
+          window.close();
+        } else {
+          navigate('/chat');
+        }
+      }, 2000);
+      
+    } catch (e: any) {
+      setError(e.message);
+      setStatus('error');
     }
   };
 
   if (loading) {
     return (
-      <div className="h-screen w-full bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white text-black flex items-center justify-center">
         <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-6 h-6 border-2 border-black rounded-full border-t-transparent"
+           animate={{ rotate: 360 }}
+           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+           className="w-6 h-6 border-2 border-black rounded-full border-t-transparent"
         />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-white text-black font-sans flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Background Ambient Glow */}
+    <div className="min-h-screen bg-white text-black font-sans flex flex-col items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[500px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50/40 via-white/0 to-transparent pointer-events-none"></div>
-      
+
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md relative z-10 text-center"
+        className="max-w-md w-full relative z-10"
       >
         <div className="mb-12 flex justify-center">
           <div className="p-4 bg-gray-50 rounded-3xl border border-gray-100 shadow-sm">
@@ -60,47 +99,63 @@ export default function Auth() {
           </div>
         </div>
 
-        <h1 className="text-4xl font-bold tracking-tighter mb-4">Identity Protocol</h1>
-        <p className="text-gray-500 mb-12 font-medium">Link your account to synchronize neural fragments and access the Cipher API across all interfaces.</p>
+        <h1 className="text-3xl font-bold text-center tracking-tighter mb-8">
+          <span className="text-black/30">›_</span> Device Linking
+        </h1>
 
-        {user ? (
-          <div className="bg-green-50 border border-green-100 rounded-2xl p-6 mb-8 flex items-center justify-center gap-3">
-            <ShieldCheck size={20} className="text-green-600" />
-            <span className="text-green-700 font-bold tracking-tight">Identity Verified. Redirecting...</span>
+        {code && status !== 'verified' && (
+          <div className="bg-gray-50 border border-gray-100 rounded-3xl p-8 mb-6 shadow-sm">
+            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-4">Verification Code</p>
+            <p className="text-4xl font-mono text-center text-black mb-8 tracking-tighter">{code}</p>
+            
+            {!user ? (
+              <div className="text-center">
+                <p className="text-gray-500 text-sm mb-6">Link your Cipher Identity to authorize this terminal session.</p>
+                <button
+                  onClick={handleGoogleLogin}
+                  className="w-full bg-black text-white py-4 rounded-2xl font-bold hover:bg-gray-800 transition active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  <Globe size={18} /> Sign in with Google
+                </button>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-gray-500 text-sm mb-6">Welcome, <b>{user.displayName || user.email}</b></p>
+                <button
+                  onClick={() => verifyDevice(code)}
+                  disabled={status === 'verifying'}
+                  className="w-full bg-black text-white py-4 rounded-2xl font-bold hover:bg-gray-800 transition disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {status === 'verifying' ? 'Establishing Neural Link...' : 'Confirm Device Link'}
+                </button>
+              </div>
+            )}
           </div>
-        ) : (
-          <button 
-            onClick={handleLogin}
-            className="w-full py-4 bg-black text-white font-bold rounded-2xl text-lg hover:bg-gray-800 transition-all shadow-xl shadow-black/5 flex items-center justify-center gap-3 active:scale-[0.98]"
-          >
-            <Globe size={20} /> Continue with Google
-          </button>
         )}
 
-        <div className="mt-12 grid grid-cols-2 gap-4 text-left">
-           <div className="p-4 rounded-xl border border-gray-50 bg-gray-50/30">
-              <Zap size={16} className="text-blue-500 mb-2" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Compute Pool</p>
-              <p className="text-xs font-semibold text-black">Unrestricted Reasoning</p>
-           </div>
-           <div className="p-4 rounded-xl border border-gray-50 bg-gray-50/30">
-              <Globe size={16} className="text-purple-500 mb-2" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Neural Sync</p>
-              <p className="text-xs font-semibold text-black">Cross-Platform Memory</p>
-           </div>
-        </div>
+        {status === 'verified' && (
+          <div className="bg-green-50 border border-green-100 rounded-3xl p-8 text-center animate-in fade-in zoom-in duration-300">
+            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck size={24} className="text-white" />
+            </div>
+            <p className="text-green-800 font-bold">Neural link verified.</p>
+            <p className="text-green-600/70 text-xs mt-2">The CLI session is now synchronized.</p>
+          </div>
+        )}
 
-        <button 
-          onClick={() => navigate('/')} 
-          className="mt-16 flex items-center gap-2 text-xs text-gray-400 hover:text-black transition-colors uppercase tracking-widest font-bold mx-auto group"
-        >
-          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Return to Hub
-        </button>
+        {!code && (
+          <div className="text-center text-gray-400">
+             <p className="text-sm font-medium">No device code detected.</p>
+             <p className="text-xs mt-2">Run <code className="bg-gray-50 px-2 py-0.5 rounded text-black font-mono">cipher login</code> to initiate a link.</p>
+             <button onClick={() => navigate('/')} className="mt-8 text-[10px] font-bold uppercase tracking-widest hover:text-black">Return to Hub</button>
+          </div>
+        )}
+
+        {error && (
+          <p className="text-red-500 text-center text-xs mt-6 font-medium tracking-tight bg-red-50 py-2 rounded-lg">{error}</p>
+        )}
       </motion.div>
-
-      <div className="absolute bottom-12 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300">
-        Cipher Intelligence Agency • 2026
-      </div>
     </div>
   );
 }
+
