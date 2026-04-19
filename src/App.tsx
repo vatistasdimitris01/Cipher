@@ -1,4 +1,4 @@
-import { MoreHorizontal, ArrowUp, X, Check, User as UserIcon, Copy, Settings, Shield, Trash2, FileText, Code2, Server } from 'lucide-react';
+import { MoreHorizontal, ArrowUp, X, Check, User as UserIcon, Copy, Settings, Fingerprint, Trash2, FileText, Code2, Server } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
@@ -488,7 +488,7 @@ export default function App() {
         >
           <div className="mb-12">
              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}>
-                <Shield size={24} />
+                <Fingerprint size={24} />
              </div>
           </div>
 
@@ -1032,7 +1032,7 @@ export default function App() {
                             memories.map(m => (
                                <div key={m.id} className={`p-3 rounded-xl border text-sm flex gap-3 ${theme === 'dark' ? 'bg-transparent border-[#222]' : 'bg-white border-gray-200'}`}>
                                  <div className="mt-1">
-                                    <Shield size={16} className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} />
+                                    <Fingerprint size={16} className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} />
                                  </div>
                                  <div>
                                    <p className={theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}>{m.fact}</p>
@@ -1144,7 +1144,7 @@ export default function App() {
                 className="max-w-md w-full text-center"
               >
                 <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-8 ${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}>
-                  <Shield size={32} />
+                  <Fingerprint size={32} />
                 </div>
                 
                 <h2 className="text-3xl font-bold tracking-tight mb-4">Neural Entry Detected</h2>
@@ -1165,7 +1165,7 @@ export default function App() {
                         </div>
                      ) : (
                         <>
-                           <Shield size={20} />
+                           <Fingerprint size={20} />
                            <span>Authorize Neural Sync</span>
                         </>
                      )}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, BookOpen, Terminal, Sparkles, Cpu, Zap, Key } from 'lucide-react';
+import { ArrowLeft, Fingerprint, Terminal, Sparkles, Cpu, Zap, Key } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -226,7 +226,7 @@ export default function Docs() {
              <ArrowLeft size={14} /> Back to Hub
            </button>
            <h2 className="text-base font-bold tracking-tight text-black flex items-center gap-2">
-             <BookOpen size={16} className="text-blue-600" /> Cipher Documentation
+             <Fingerprint size={16} className="text-blue-600" /> Cipher Documentation
            </h2>
         </div>
         
