@@ -1,5 +1,6 @@
-import { MoreHorizontal, ArrowUp, X, Check, User as UserIcon, Copy, Settings, Shield, Trash2 } from 'lucide-react';
+import { MoreHorizontal, ArrowUp, X, Check, User as UserIcon, Copy, Settings, Shield, Trash2, FileText, Code2, Server } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { addDoc, collection, doc, getDocs, orderBy, query, serverTimestamp, updateDoc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import Markdown from 'react-markdown';
@@ -64,17 +65,27 @@ export default function App() {
   const [pendingAction, setPendingAction] = useState<{type: 'new' | 'select', payload?: any} | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const [userProfile, setUserProfile] = useState<{nickname?: string, bio?: string}>({});
+  const [memories, setMemories] = useState<any[]>([]);
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
-  const [dailyUsage, setDailyUsage] = useState(0);
+  const [tokenUsage, setTokenUsage] = useState(0);
 
-  const CREDITS_LIMIT = 50;
+  const TOKEN_LIMIT = 500000;
 
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [selectedModel, setSelectedModel] = useState('nemotron-3-super-free');
   const [skipSlop, setSkipSlop] = useState(true);
-  const [settingsTab, setSettingsTab] = useState<'account' | 'cipher' | 'appearance'>('account');
+  const [settingsTab, setSettingsTab] = useState<'account' | 'cipher' | 'appearance' | 'mcp'>('account');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [locationSyncing, setLocationSyncing] = useState(false);
+  const [pastedBlocks, setPastedBlocks] = useState<{id: string, text: string, lines: number}[]>([]);
+  const [isDevMenuOpen, setIsDevMenuOpen] = useState(false);
+  
+  // MCP hooks local state
+  const [mcpServers, setMcpServers] = useState<{id: string, name: string, url: string, tools: any[]}[]>([]);
+  const [mcpName, setMcpName] = useState('');
+  const [mcpUrl, setMcpUrl] = useState('');
+  const [mcpToolsStr, setMcpToolsStr] = useState('[]');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isPWA = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
 
@@ -131,6 +142,18 @@ export default function App() {
     document.body.style.backgroundColor = theme === 'dark' ? '#080808' : '#ffffff';
   }, [theme]);
 
+  const fetchMcp = async () => {
+    try {
+      const res = await fetch('/api/v1/mcp');
+      const data = await res.json();
+      if (data.servers) setMcpServers(data.servers);
+    } catch(e) {}
+  };
+
+  useEffect(() => {
+    fetchMcp();
+  }, []);
+
   useEffect(() => {
     if (user) {
       const fetchInitialData = async () => {
@@ -143,12 +166,17 @@ export default function App() {
           const today = new Date().toISOString().split('T')[0];
           if (userSnap.exists()) {
              const data = userSnap.data();
+             setUserProfile({ nickname: data.nickname || '', bio: data.bio || '' });
              if (data.lastMessageDate === today) {
-                setDailyUsage(data.dailyUsage || 0);
+                setTokenUsage(data.tokenUsage || 0);
              } else {
-                setDailyUsage(0);
+                setTokenUsage(0);
              }
           }
+          
+          const memQ = query(collection(db, 'users', user.uid, 'memory'), orderBy('createdAt', 'desc'));
+          const memSnap = await getDocs(memQ);
+          setMemories(memSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } catch (err) {
           console.error('Error fetching init data:', err);
         }
@@ -158,7 +186,9 @@ export default function App() {
       setChatHistory([]);
       setCurrentChatId(null);
       setMessages([]);
-      setDailyUsage(0);
+      setTokenUsage(0);
+      setUserProfile({});
+      setMemories([]);
     }
   }, [user]);
 
@@ -187,23 +217,9 @@ export default function App() {
     }
   };
 
-  const checkAndIncrementUsage = async (uid: string) => {
+  const addTokenUsage = async (uid: string, tokens: number) => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      
-      // Secondary check via localStorage footprint
-      const localDataStr = localStorage.getItem('cipher_device_limits');
-      if (localDataStr) {
-         try {
-            const localData = JSON.parse(localDataStr);
-            if (localData.date === today && localData.usage >= CREDITS_LIMIT) {
-                setLimitWarning(`Device blocked: Maximum daily credits (${CREDITS_LIMIT}) reached. Resets at midnight.`);
-                setTimeout(() => setLimitWarning(null), 5000);
-                return false;
-            }
-         } catch(e) {}
-      }
-
       const userRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userRef);
       
@@ -211,67 +227,98 @@ export default function App() {
       if (userSnap.exists()) {
         const data = userSnap.data();
         if (data.lastMessageDate === today) {
-           currentUsage = data.dailyUsage || 0;
+           currentUsage = data.tokenUsage || 0;
         }
       }
 
-      if (currentUsage >= CREDITS_LIMIT) {
-          setLimitWarning(`Protocol access suspended: Maximum daily credits (${CREDITS_LIMIT}) reached. Resets at midnight.`);
-          setTimeout(() => setLimitWarning(null), 5000);
-          localStorage.setItem('cipher_device_limits', JSON.stringify({ date: today, usage: currentUsage }));
-          return false;
-      }
-      
-      const newUsage = currentUsage + 1;
-      await setDoc(userRef, { dailyUsage: newUsage, lastMessageDate: today }, { merge: true });
-      setDailyUsage(newUsage);
+      const newUsage = currentUsage + tokens;
+      await setDoc(userRef, { tokenUsage: newUsage, lastMessageDate: today }, { merge: true });
+      setTokenUsage(newUsage);
       localStorage.setItem('cipher_device_limits', JSON.stringify({ date: today, usage: newUsage }));
 
-      const remaining = CREDITS_LIMIT - newUsage;
-      if (remaining <= 5 && remaining > 0) {
-          setLimitWarning(`Warning: Only ${remaining} credits remaining today.`);
+      const remaining = TOKEN_LIMIT - newUsage;
+      if (remaining <= 5000 && remaining > 0) {
+          setLimitWarning(`Warning: Context horizon approaching. ${remaining.toLocaleString()} tokens left today.`);
           setTimeout(() => setLimitWarning(null), 4000);
       }
-
-      return true;
     } catch (err) {
-      console.error('Usage tracking error:', err);
-      // Allow pass-through if firestore fails rather than breaking UX
-      return true;
+      console.error('Token tracking error:', err);
     }
   };
 
+  const updateProfile = async (field: 'nickname' | 'bio', value: string) => {
+    setUserProfile(prev => ({ ...prev, [field]: value }));
+    if (user) {
+       try {
+         await setDoc(doc(db, 'users', user.uid), { [field]: value }, { merge: true });
+       } catch (e) {
+         console.error('Failed to update profile field', e);
+       }
+    }
+  };
+
+  const addMcp = async () => {
+    if (!mcpName.trim() || !mcpUrl.trim()) return;
+    let parsedTools = [];
+    try {
+      parsedTools = JSON.parse(mcpToolsStr);
+    } catch(e) {
+      alert("Invalid JSON for tools array.");
+      return;
+    }
+    try {
+      const res = await fetch('/api/v1/mcp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: mcpName, url: mcpUrl, tools: parsedTools })
+      });
+      if (res.ok) {
+         setMcpName('');
+         setMcpUrl('');
+         setMcpToolsStr('[]');
+         fetchMcp();
+      }
+    } catch (e) {}
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !user || isChatEnded) return;
+    const finalInput = [...pastedBlocks.map(b => b.text), input].filter(Boolean).join('\n\n');
+    if (!finalInput.trim() || isLoading || !user || isChatEnded) return;
     
     // 1. Optimistic UI update - happens instantly
-    const userMsg = { role: 'user', content: input };
+    const userMsg = { role: 'user', content: finalInput };
     const currentInput = input;
+    const currentBlocks = pastedBlocks;
     const newMessages = [...messages, userMsg];
     
     setMessages(newMessages);
     setInput('');
+    setPastedBlocks([]);
     setIsLoading(true);
 
     // 2. Perform usage check in background or via local state check first
     const today = new Date().toISOString().split('T')[0];
-    if (dailyUsage >= CREDITS_LIMIT) {
-        setLimitWarning(`Protocol access suspended: Maximum daily credits (${CREDITS_LIMIT}) reached. Resets at midnight.`);
+    if (tokenUsage >= TOKEN_LIMIT) {
+        setLimitWarning(`Protocol access suspended: Maximum daily tokens (${TOKEN_LIMIT}) reached. Resets at midnight.`);
         setTimeout(() => setLimitWarning(null), 5000);
         
         // Revert UI if blocked
         setMessages(messages);
         setInput(currentInput);
+        setPastedBlocks(currentBlocks);
         setIsLoading(false);
         return;
     }
 
-    // 3. Fire-and-forget the increment to not block the chat request
-    checkAndIncrementUsage(user.uid);
-
     abortControllerRef.current = new AbortController();
 
     try {
+      // Combine bio and memory facts
+      const compiledContext = [
+         userProfile.bio ? `User Bio: ${userProfile.bio}` : '',
+         memories.length > 0 ? `Saved Neural Fragments (Important Facts):\n${memories.map(m => `- ${m.fact}`).join('\n')}` : ''
+      ].filter(Boolean).join('\n\n');
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -279,41 +326,69 @@ export default function App() {
         body: JSON.stringify({
           model: selectedModel,
           skipSlop: skipSlop,
-          userName: user.displayName || 'Unknown User',
-          messages: newMessages.map(m => ({ role: m.role, content: m.content }))
+          userName: userProfile.nickname || user.displayName || 'Unknown User',
+          userContext: compiledContext,
+          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "save_memory",
+                description: "Save important facts or preferences about the user to Cipher's memory so you explicitly remember them forever. Use this when the user asks you to remember something or provides key facts about themselves.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    fact: { type: "string", description: "The core fact to remember (e.g. 'User is a developer in Athens', 'User likes dark mode')" }
+                  },
+                  required: ["fact"]
+                }
+              }
+            }
+          ]
         })
       });
 
       const data = await response.json();
       let assistantMsgContent = '';
+      
+      if (data.usage?.total_tokens) {
+         addTokenUsage(user.uid, data.usage.total_tokens);
+      }
 
       if (data.error) {
          const errMsg = typeof data.error === 'object' ? JSON.stringify(data.error) : data.error;
          assistantMsgContent = `Error: ${errMsg}`;
+      } else if (data.choices[0]?.message?.tool_calls?.length > 0) {
+         // Handle tool call
+         const toolCall = data.choices[0].message.tool_calls[0];
+         if (toolCall.function.name === 'save_memory') {
+            try {
+               const args = JSON.parse(toolCall.function.arguments);
+               await addDoc(collection(db, 'users', user.uid, 'memory'), {
+                  fact: args.fact,
+                  createdAt: serverTimestamp()
+               });
+               assistantMsgContent = `*[Memory Updated]*: I have safely stored: "${args.fact}" in my neural vault.`;
+               // Reload memories immediately
+               const memQ = query(collection(db, 'users', user.uid, 'memory'), orderBy('createdAt', 'desc'));
+               const memSnap = await getDocs(memQ);
+               setMemories(memSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+            } catch (e) {
+               assistantMsgContent = "Sorry, I encountered a fragment error while saving the memory.";
+            }
+         } else {
+            assistantMsgContent = data.choices[0].message.content || '[Tool execution completed]';
+         }
       } else {
-         assistantMsgContent = data.choices[0].message.content;
+         assistantMsgContent = data.choices[0].message.content || '';
       }
 
-      let newlyEnded = false;
       const lowerContent = assistantMsgContent.toLowerCase().trim();
       
-      if (
-        assistantMsgContent.includes('[END_CONVERSATION]') || 
-        assistantMsgContent.includes('[END]') ||
-        lowerContent === 'end' || 
-        lowerContent === 'end.' || 
-        lowerContent === 'end of conversation.' ||
-        lowerContent.includes('chat ended') ||
-        lowerContent.includes('end this chat') ||
-        lowerContent.includes('[no response]') ||
-        lowerContent.includes('[no output]')
-      ) {
-         newlyEnded = true;
-         // Strip out tags so they don't render as ugly text
-         assistantMsgContent = assistantMsgContent.replace(/\[END_CONVERSATION\]/gi, '').replace(/\[END\]/gi, '').replace(/\[No response\]/gi, '').replace(/\[No output\]/gi, '').trim();
-         
-         // If it literally just output "end" and stripped to nothing
-         if (assistantMsgContent.toLowerCase() === 'end' || assistantMsgContent.toLowerCase() === 'end.' || assistantMsgContent === '' || assistantMsgContent.toLowerCase().includes('chat ended')) {
+      // Extremely strict ending rule, only when explicit END_CONVERSATION token is output.
+      if (assistantMsgContent.includes('[END_CONVERSATION]')) {
+         assistantMsgContent = assistantMsgContent.replace(/\[END_CONVERSATION\]/gi, '').trim();
+         if (!assistantMsgContent) {
              assistantMsgContent = "Session protocol successfully terminated.";
          }
          setIsChatEnded(true);
@@ -355,10 +430,11 @@ export default function App() {
 
       if (!finalChatId) {
         // Create new chat
+        const isCurrentlyEnded = assistantMsgContent.toLowerCase().includes('session protocol successfully terminated.');
         const chatDocRef = await addDoc(collection(db, 'users', user.uid, 'chats'), {
           title: finalTitle,
           messages: finalMessages,
-          isEnded: isChatEnded || newlyEnded,
+          isEnded: isChatEnded || isCurrentlyEnded,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
@@ -367,10 +443,11 @@ export default function App() {
         setChatHistory(prev => [{ id: finalChatId, title: finalTitle, updatedAt: Date.now() }, ...prev]);
       } else {
         // Update existing chat
+        const isCurrentlyEnded = assistantMsgContent.toLowerCase().includes('session protocol successfully terminated.');
         const chatRef = doc(db, 'users', user.uid, 'chats', finalChatId);
         await updateDoc(chatRef, {
           messages: finalMessages,
-          isEnded: isChatEnded || newlyEnded,
+          isEnded: isChatEnded || isCurrentlyEnded,
           updatedAt: serverTimestamp()
         });
       }
@@ -388,13 +465,13 @@ export default function App() {
 
   // Theme styles
   const bgMain = theme === 'dark' ? 'bg-pitch-black text-[#ececec]' : 'bg-[#fff] text-[#111827]';
-  const iconColor = theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-gray-900';
-  const userBubble = theme === 'dark' ? 'bg-[#1a1a1a] text-white border border-[#242424]' : 'bg-gray-100 text-gray-900';
-  const aiText = theme === 'dark' ? 'text-[#ececec] markdown-body' : 'text-gray-900 markdown-body';
-  const inputCont = theme === 'dark' ? 'bg-[#121212] border border-[#242424]' : 'bg-gray-200';
+  const iconColor = theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-900';
+  const userBubble = theme === 'dark' ? 'bg-[#1a1a1a] text-white border border-[#242424]' : 'bg-gray-100 text-gray-900 border border-gray-200';
+  const aiText = theme === 'dark' ? 'text-[#ececec] markdown-body' : 'text-gray-800 markdown-body';
+  const inputCont = theme === 'dark' ? 'bg-[#121212] border border-[#242424]' : 'bg-gray-50 border border-gray-200 shadow-sm';
   const inputClass = theme === 'dark' ? 'text-white' : 'text-gray-900';
   const btnActive = theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800';
-  const btnInactive = theme === 'dark' ? 'bg-[#1a1a1a] text-[#444]' : 'bg-[#e4e4e7] text-[#a1a1aa]';
+  const btnInactive = theme === 'dark' ? 'bg-[#1a1a1a] text-[#444]' : 'bg-[#f3f4f6] text-[#9ca3af]';
 
   if (authLoading) {
     return <div className={`h-screen flex items-center justify-center ${bgMain} font-mono tracking-widest text-xs opacity-50 uppercase`}>Initializing Protocol...</div>;
@@ -558,7 +635,8 @@ export default function App() {
         </div>
 
         {/* Top Right Menu Icons */}
-        <div className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 flex gap-2 z-20">
+        <div className="absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 flex gap-2 z-20 items-center">
+          
           <button 
             onClick={startNewChat}
             className={`cursor-pointer p-2 rounded-full transition-colors ${iconColor}`}
@@ -574,7 +652,7 @@ export default function App() {
             className={`cursor-pointer p-2 rounded-full transition-colors ${iconColor}`}
             title="Settings"
           >
-              <MoreHorizontal size={24} />
+              <Settings size={24} />
           </button>
         </div>
 
@@ -644,31 +722,58 @@ export default function App() {
               )}
             </AnimatePresence>
 
-            <div className={`w-full max-w-3xl flex items-end pl-6 pr-2 py-2 transition-all duration-300 ${inputCont} ${isChatEnded ? 'opacity-50 pointer-events-none' : ''} ${input.includes('\n') || (textareaRef.current && textareaRef.current.scrollHeight > 44) ? 'rounded-[24px]' : 'rounded-full'}`}>
-                <textarea
-                    ref={textareaRef}
-                    rows={1}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSend();
-                        }
-                    }}
-                    disabled={isLoading || isChatEnded}
-                    className={`bg-transparent border-none outline-none flex-1 text-[16px] py-1.5 resize-none no-scrollbar leading-[1.4] ${inputClass} disabled:cursor-not-allowed`}
-                    placeholder={isChatEnded ? "Protocol Terminated..." : "Message Cipher..."}
-                />
-                <button
-                    onClick={handleSend}
-                    disabled={!input.trim() || isLoading || isChatEnded}
-                    className={`rounded-full w-9 h-9 flex items-center justify-center ml-2 mb-0.5 flex-shrink-0 transition-colors ${
-                        (input.trim() && !isLoading && !isChatEnded) ? `${btnActive} cursor-pointer` : `${btnInactive} cursor-not-allowed`
-                    }`}
-                >
-                    <ArrowUp strokeWidth={2} size={18} />
-                </button>
+            <div className={`w-full max-w-3xl flex flex-col pl-6 pr-2 py-2 transition-all duration-300 ${inputCont} ${isChatEnded ? 'opacity-50 pointer-events-none' : ''} ${input.includes('\n') || (textareaRef.current && textareaRef.current.scrollHeight > 44) || pastedBlocks.length > 0 ? 'rounded-[24px]' : 'rounded-full'}`}>
+                {pastedBlocks.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2 mt-1">
+                        {pastedBlocks.map(block => (
+                            <div key={block.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm ${theme === 'dark' ? 'bg-[#2a2a2a] text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+                                <FileText size={14} />
+                                <span className="max-w-[200px] truncate">Pasted text ({block.lines} lines)</span>
+                                <button onClick={() => setPastedBlocks(prev => prev.filter(b => b.id !== block.id))} className="hover:opacity-70 ml-1">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="flex items-end w-full">
+                    <textarea
+                        ref={textareaRef}
+                        rows={1}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onPaste={(e) => {
+                            const text = e.clipboardData.getData('text');
+                            const lines = text.split('\n').length;
+                            if (lines > 3 || text.length > 150) {
+                                e.preventDefault();
+                                setPastedBlocks(prev => [...prev, { id: Date.now().toString() + Math.random(), text, lines }]);
+                            }
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Backspace' && input === '' && pastedBlocks.length > 0) {
+                                e.preventDefault();
+                                setPastedBlocks(prev => prev.slice(0, -1));
+                            }
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSend();
+                            }
+                        }}
+                        disabled={isLoading || isChatEnded}
+                        className={`bg-transparent border-none outline-none flex-1 text-[16px] py-1.5 resize-none no-scrollbar leading-[1.4] ${inputClass} disabled:cursor-not-allowed`}
+                        placeholder={isChatEnded ? "Protocol Terminated..." : "Message Cipher..."}
+                    />
+                    <button
+                        onClick={handleSend}
+                        disabled={(!input.trim() && pastedBlocks.length === 0) || isLoading || isChatEnded}
+                        className={`rounded-full w-9 h-9 flex items-center justify-center ml-2 mb-0.5 flex-shrink-0 transition-colors ${
+                            ((input.trim() || pastedBlocks.length > 0) && !isLoading && !isChatEnded) ? `${btnActive} cursor-pointer` : `${btnInactive} cursor-not-allowed`
+                        }`}
+                    >
+                        <ArrowUp strokeWidth={2} size={18} />
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -795,24 +900,30 @@ export default function App() {
                 </div>
 
                 {/* Tabs */}
-              <div className={`flex px-6 pt-4 space-x-6 border-b ${theme === 'dark' ? 'border-transparent' : 'border-gray-200'}`}>
+              <div className={`flex px-6 pt-2 space-x-6 border-b ${theme === 'dark' ? 'border-[#1a1a1a]' : 'border-gray-200'}`}>
                 <button 
                   onClick={() => setSettingsTab('account')}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 ${settingsTab === 'account' ? (theme === 'dark' ? 'border-blue-500 text-blue-400' : 'border-blue-500 text-blue-600') : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                  className={`pb-2 text-sm font-medium transition-colors border-b-2 ${settingsTab === 'account' ? (theme === 'dark' ? 'border-white text-white' : 'border-black text-black') : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                 >
                   Account
                 </button>
                 <button 
                   onClick={() => setSettingsTab('cipher')}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 ${settingsTab === 'cipher' ? (theme === 'dark' ? 'border-blue-500 text-blue-400' : 'border-blue-500 text-blue-600') : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                  className={`pb-2 text-sm font-medium transition-colors border-b-2 ${settingsTab === 'cipher' ? (theme === 'dark' ? 'border-white text-white' : 'border-black text-black') : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                 >
                   Cipher
                 </button>
                 <button 
                   onClick={() => setSettingsTab('appearance')}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 ${settingsTab === 'appearance' ? (theme === 'dark' ? 'border-blue-500 text-blue-400' : 'border-blue-500 text-blue-600') : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                  className={`pb-2 text-sm font-medium transition-colors border-b-2 ${settingsTab === 'appearance' ? (theme === 'dark' ? 'border-white text-white' : 'border-black text-black') : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                 >
                   Appearance
+                </button>
+                <button 
+                  onClick={() => setSettingsTab('mcp')}
+                  className={`pb-2 text-sm flex items-center gap-1.5 font-medium transition-colors border-b-2 ${settingsTab === 'mcp' ? (theme === 'dark' ? 'border-purple-500 text-purple-400' : 'border-purple-500 text-purple-600') : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                >
+                  <Server size={14} /> MCP Hooks
                 </button>
               </div>
 
@@ -831,16 +942,39 @@ export default function App() {
                     <h3 className="text-xl md:text-2xl font-semibold tracking-tight">{user.displayName || 'Authenticated User'}</h3>
                     <p className={`text-sm md:text-base mt-0.5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{user.email}</p>
                     
-                    {/* Credits Display */}
+                    <div className="w-full max-w-sm mt-6 space-y-4">
+                       <div>
+                         <label className={`text-xs font-medium mb-1 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Nickname</label>
+                         <input 
+                            type="text" 
+                            className={`w-full p-3 rounded-xl border outline-none text-sm ${theme === 'dark' ? 'bg-[#111] border-cipher-border focus:border-gray-500' : 'bg-gray-50 border-gray-200 focus:border-gray-400'}`}
+                            placeholder="How Cipher should call you" 
+                            value={userProfile.nickname || ''} 
+                            onChange={(e) => updateProfile('nickname', e.target.value)} 
+                         />
+                       </div>
+                       <div>
+                         <label className={`text-xs font-medium mb-1 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Bio / User Context</label>
+                         <textarea 
+                            rows={2}
+                            className={`w-full p-3 rounded-xl border outline-none text-sm resize-none ${theme === 'dark' ? 'bg-[#111] border-cipher-border focus:border-gray-500' : 'bg-gray-50 border-gray-200 focus:border-gray-400'}`}
+                            placeholder="Add key facts about yourself..." 
+                            value={userProfile.bio || ''} 
+                            onChange={(e) => updateProfile('bio', e.target.value)} 
+                         />
+                       </div>
+                    </div>
+
+                    {/* Context Display */}
                     <div className={`mt-8 w-full max-w-sm rounded-2xl p-5 border ${theme === 'dark' ? 'bg-[#0f0f0f] border-transparent' : 'bg-white border-gray-200 shadow-sm'}`}>
                        <div className="flex justify-between items-end mb-2">
-                         <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Daily Credits</span>
-                         <span className="text-2xl font-bold text-blue-500">{CREDITS_LIMIT - dailyUsage} <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>/ {CREDITS_LIMIT}</span></span>
+                         <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Context Tokens Left</span>
+                         <span className="text-xl font-bold text-blue-500">{(TOKEN_LIMIT - tokenUsage).toLocaleString()}</span>
                        </div>
                        <div className={`w-full h-2 rounded-full overflow-hidden ${theme === 'dark' ? 'bg-[#333]' : 'bg-gray-200'}`}>
-                          <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${Math.max(0, ((CREDITS_LIMIT - dailyUsage) / CREDITS_LIMIT) * 100)}%` }}></div>
+                          <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${Math.max(0, ((TOKEN_LIMIT - tokenUsage) / TOKEN_LIMIT) * 100)}%` }}></div>
                        </div>
-                       <p className={`text-xs mt-3 text-center ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Credits reset automatically at midnight.</p>
+                       <p className={`text-xs mt-3 text-center ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Token usage context limit. Resets automatically at midnight.</p>
                     </div>
                     
                     <button 
@@ -886,6 +1020,29 @@ export default function App() {
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${skipSlop ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </div>
+                    <div className="pt-6 border-t border-cipher-border mt-8">
+                       <h3 className="text-lg font-semibold tracking-tight mb-4">Neural Memory Vault</h3>
+                       <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Cipher actively learns and stores important fragments about your sessions here to serve you better over time.</p>
+                       <div className="space-y-3">
+                         {memories.length === 0 ? (
+                            <div className={`p-4 rounded-xl text-sm ${theme === 'dark' ? 'bg-[#111] text-gray-500' : 'bg-gray-50 text-gray-400'}`}>
+                              Vault is clean. No fragments learned yet. Tell Cipher to remember something.
+                            </div>
+                         ) : (
+                            memories.map(m => (
+                               <div key={m.id} className={`p-3 rounded-xl border text-sm flex gap-3 ${theme === 'dark' ? 'bg-transparent border-[#222]' : 'bg-white border-gray-200'}`}>
+                                 <div className="mt-1">
+                                    <Shield size={16} className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} />
+                                 </div>
+                                 <div>
+                                   <p className={theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}>{m.fact}</p>
+                                   <p className={`text-[11px] mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{new Date(m.createdAt?.toMillis ? m.createdAt.toMillis() : Date.now()).toLocaleDateString()}</p>
+                                 </div>
+                               </div>
+                            ))
+                         )}
+                       </div>
+                    </div>
                   </>
                 )}
 
@@ -901,6 +1058,74 @@ export default function App() {
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${theme === 'light' ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
+                  </div>
+                )}
+
+                {settingsTab === 'mcp' && (
+                  <div className="py-2 space-y-6">
+                    <div>
+                        <h3 className="text-lg font-semibold tracking-tight mb-2">Active MCP Servers</h3>
+                        <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Extend Cipher with custom tools and logic hooks.</p>
+                        
+                        {mcpServers.length === 0 ? (
+                           <div className={`p-4 rounded-xl text-sm mb-6 ${theme === 'dark' ? 'bg-[#1a1a1a] text-gray-500' : 'bg-gray-50 text-gray-400'}`}>
+                             No MCP servers connected.
+                           </div>
+                        ) : (
+                           <div className="space-y-3 mb-6">
+                              {mcpServers.map(mcp => (
+                                 <div key={mcp.id} className={`p-4 rounded-xl border flex flex-col gap-2 ${theme === 'dark' ? 'bg-[#1a1a1a] border-[#333]' : 'bg-gray-50 border-gray-200'}`}>
+                                    <div className="flex justify-between items-start">
+                                       <div>
+                                          <h4 className="font-medium">{mcp.name}</h4>
+                                          <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{mcp.url}</p>
+                                       </div>
+                                       <span className="bg-purple-500/10 text-purple-500 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">{mcp.tools?.length || 0} Tools</span>
+                                    </div>
+                                    <div className={`mt-2 p-2 rounded-lg border text-[10px] font-mono overflow-x-auto ${theme === 'dark' ? 'bg-[#111] border-[#222] text-gray-500' : 'bg-gray-200 border-gray-300 text-gray-600'}`}>
+                                       {JSON.stringify(mcp.tools, null, 2)}
+                                    </div>
+                                 </div>
+                              ))}
+                           </div>
+                        )}
+
+                        <h3 className="text-sm font-semibold tracking-tight mb-4 uppercase text-gray-500">Add New Hook</h3>
+                        <div className="space-y-4">
+                           <div>
+                             <label className={`text-xs font-medium mb-1 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Server Name</label>
+                             <input 
+                                value={mcpName} onChange={e=>setMcpName(e.target.value)} placeholder="e.g. Weather Service Hub" 
+                                className={`w-full p-3 rounded-xl border outline-none text-sm ${theme === 'dark' ? 'bg-[#111] border-[#333] focus:border-purple-500' : 'bg-gray-50 border-gray-200 focus:border-purple-500'}`}
+                             />
+                           </div>
+                           <div>
+                             <label className={`text-xs font-medium mb-1 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Webhook URL</label>
+                             <input 
+                                value={mcpUrl} onChange={e=>setMcpUrl(e.target.value)} placeholder="https://api.my-mcp.server/" 
+                                className={`w-full p-3 rounded-xl border outline-none text-sm ${theme === 'dark' ? 'bg-[#111] border-[#333] focus:border-purple-500' : 'bg-gray-50 border-gray-200 focus:border-purple-500'}`}
+                             />
+                           </div>
+                           <div>
+                             <label className={`text-xs font-medium mb-1 flex justify-between ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                               <span>Tool Schema (JSON Array)</span>
+                               <Link to="/docs" onClick={() => setIsSettingsOpen(false)} className="text-purple-500 hover:text-purple-400">Schema Docs</Link>
+                             </label>
+                             <textarea 
+                               value={mcpToolsStr} 
+                               onChange={e=>setMcpToolsStr(e.target.value)}
+                               className={`w-full p-4 rounded-xl border outline-none text-xs font-mono resize-none h-32 ${theme === 'dark' ? 'bg-[#111] border-[#333] focus:border-purple-500 text-gray-300' : 'bg-gray-50 border-gray-200 focus:border-purple-500 text-gray-700'}`}
+                             />
+                           </div>
+                           <button 
+                             onClick={addMcp} 
+                             disabled={!mcpName || !mcpUrl} 
+                             className="w-full bg-purple-600/20 text-purple-500 border border-purple-500/30 px-5 py-3 rounded-xl text-sm font-semibold hover:bg-purple-600/30 transition-colors disabled:opacity-50"
+                           >
+                             Inject MCP Server
+                           </button>
+                        </div>
+                    </div>
                   </div>
                 )}
               </div>
