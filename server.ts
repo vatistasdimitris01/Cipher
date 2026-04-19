@@ -5,6 +5,7 @@ import fs from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import firebaseConfig from './firebase-applet-config.json';
 
 // Initialize Firebase Admin
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
@@ -18,6 +19,9 @@ if (serviceAccountKey && getApps().length === 0) {
     console.error("Failed to initialize Firebase Admin:", e);
   }
 }
+
+// Helper to get the correct Firestore instance for Admin
+const getDbAdmin = () => getFirestore(firebaseConfig.firestoreDatabaseId);
 
 async function startServer() {
   const app = express();
@@ -100,7 +104,7 @@ async function startServer() {
     }
     
     try {
-      const dbAdmin = getFirestore();
+      const dbAdmin = getDbAdmin();
       const docSnap = await dbAdmin.collection('auth_requests').doc(code).get();
       
       if (!docSnap.exists) {
@@ -142,7 +146,7 @@ async function startServer() {
         return res.json({ success: false, error: 'Missing code or uid' });
       }
       
-      const dbAdmin = getFirestore();
+      const dbAdmin = getDbAdmin();
       await dbAdmin.collection('auth_requests').doc(code).set({
         status: 'verified',
         uid,
@@ -167,7 +171,7 @@ async function startServer() {
         Array(3).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join('');
       
       const code = providedCode || generateCode();
-      const dbAdmin = getFirestore();
+      const dbAdmin = getDbAdmin();
       await dbAdmin.collection('auth_requests').doc(code).set({
         status: 'pending',
         createdAt: FieldValue.serverTimestamp(),

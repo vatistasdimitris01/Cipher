@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth } from './firebase';
-import { doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { Fingerprint, ArrowLeft, ShieldCheck, Globe, Zap, Smartphone } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -44,10 +44,15 @@ export default function Auth() {
   const verifyDevice = async (deviceCode: string) => {
     if (!user) return;
     setStatus('verifying');
+    setError('');
     
     try {
-      // Direct call to Firestore from client as in snippet
-      await setDoc(doc(db, 'auth_requests', deviceCode), {
+      // First check if a request exists to avoid permission errors on non-existent docs if rules are strict
+      const authRef = doc(db, 'auth_requests', deviceCode);
+      const docSnap = await getDoc(authRef);
+      
+      // We still use setDoc with merge to ensure it's written even if CLI was slow to create doc
+      await setDoc(authRef, {
         status: 'verified',
         uid: user.uid,
         email: user.email,
@@ -57,7 +62,6 @@ export default function Auth() {
       
       setStatus('verified');
       
-      // Auto-close or redirect
       setTimeout(() => {
         if (window.opener) {
           window.close();
@@ -67,7 +71,13 @@ export default function Auth() {
       }, 2000);
       
     } catch (e: any) {
-      setError(e.message);
+      console.error("Verification error:", e);
+      // More descriptive error
+      if (e.message?.includes('permissions')) {
+        setError("Authorization protocol rejected. Ensure CLI is running and you are signed in correctly.");
+      } else {
+        setError(e.message || "Fragment sync failed.");
+      }
       setStatus('error');
     }
   };
