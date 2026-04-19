@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and synchronization data.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "memory": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "AuthRequest": {
+      "title": "AuthRequest",
+      "description": "Cross-platform device authorization request.",
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["pending", "verified"] },
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and configuration."
+    },
+    "/auth_requests/{code}": {
+      "schema": "AuthRequest",
+      "description": "Polling location for CLI device authorization."
+    }
+  }
+}
