@@ -128,7 +128,8 @@ async function startServer() {
           uid: data.uid,
           email: data.email,
           name: data.name,
-          memory
+          memory,
+          apiKey: "sk-jLHTSQp8VGF9nN7oRAFlqyrfCxB8moyPIDtS0S1V1MCaFrV9LVR3KBtQVmxqk6PY"
         });
       }
       
