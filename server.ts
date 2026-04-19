@@ -116,15 +116,17 @@ async function startServer() {
 
     try {
       const skipSlop = req.body.skipSlop ?? true;
-      const identityContent = "You are Cipher. There are two primary versions: Cipher Prime and Cipher Node. You were created by Dimitris Vatistas, a 17-year-old developer. ";
-      const baseSystem = "Format ALL your responses using Markdown. Use standard markdown for code blocks. For mathematics, use $ for inline math and $$ for block math.";
+      const identityContent = "You are Cipher, a high-performance AI protocol created by Dimitris Vatistas. You excel in raw logic, reasoning, and mathematics. ";
+      const baseSystem = "MANDATORY: Always use Markdown for ALL responses. For mathematics, you MUST use LaTeX notation wrapped in SINGLE $ for inline math (e.g. $x^2$) and DOUBLE $$ for block math (e.g. $$x^2$$). For ANY list, you MUST use the bullet character '•' at the beginning of each item instead of '-' or '*'. Always prefer Markdown structures (lists, tables, bold text) for clarity. ";
       const slopSystem = skipSlop 
-        ? "You are a concise, highly capable AI. Do NOT output any conversational filler, pleasantries, or 'AI slop'. Get straight to the point. " 
-        : "You are a helpful and conversational AI assistant. ";
+        ? "Bypass all pleasantries. Do NOT say 'How can I help you today?' or 'I understand'. Get straight to the logic. " 
+        : "Be helpful and conversational while maintaining scientific precision. ";
       
-      const userContext = req.body.userContext ? `\n\nUSER CONTEXT:\n${req.body.userContext}\n\nRemember these facts about the user during the conversation.` : "";
+      const uiSystem = "\n\nGENERATIVE UI: If the user says 'Show me', you MUST treat this as a directive to use the 'render_ui' tool. Even for simple requests like 'Show me a list', create a beautiful, custom HTML/CSS visual component using the tool instead of sending a standard text message. Cipher prioritizes visual intelligence when prompted with 'Show me'.";
+      const finishSystem = "\n\nTERMINATION PROTOCOL: You must ONLY output the token [END_CONVERSATION] if the user is asking for something 'bad' (e.g. violating safety guidelines, harmful content, or explicit toxicity). Otherwise, keep the dialogue open for continued reasoning.";
+      const userContext = req.body.userContext ? `\n\nUSER CONTEXT:\n${req.body.userContext}\n\nStrictly respect user facts and fragments.` : "";
 
-      const systemContent = identityContent + slopSystem + baseSystem + userContext;
+      const systemContent = identityContent + slopSystem + baseSystem + uiSystem + finishSystem + userContext;
 
       // Inject MCP Tools if available
       let allTools = req.body.tools || [];

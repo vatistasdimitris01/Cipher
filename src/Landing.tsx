@@ -445,7 +445,6 @@ export default function Landing() {
                   <h5 className="font-bold mb-4">Ecosystem</h5>
                   <Link to="/developers" className="text-gray-500 hover:text-black">API</Link>
                   <Link to="/docs" className="text-gray-500 hover:text-black">Docs</Link>
-                  <Link to="/banner" className="text-gray-500 hover:text-black">Assets</Link>
                   <Link to="/chat" className="text-gray-500 hover:text-black">Login</Link>
                </div>
                <div className="flex flex-col gap-4">

@@ -9,6 +9,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db, handleFirestoreError } from './firebase';
+import 'katex/dist/katex.min.css';
 
 const provider = new GoogleAuthProvider();
 
@@ -44,6 +45,33 @@ const PreBlock = ({ children, ...props }: any) => {
       <pre {...props}>
         {children}
       </pre>
+    </div>
+  );
+};
+
+const GenerativeUI = ({ html }: { html: string }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      const shadow = containerRef.current.shadowRoot || containerRef.current.attachShadow({ mode: 'open' });
+      shadow.innerHTML = `
+        <style>
+          :host { display: block; width: 100%; border-radius: 1rem; overflow: hidden; background: white; color: black; }
+          * { box-sizing: border-box; font-family: sans-serif; }
+          body { margin: 0; padding: 1rem; }
+        </style>
+        ${html}
+      `;
+    }
+  }, [html]);
+
+  return (
+    <div className="w-full my-4 rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-white min-h-[100px] relative">
+      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider z-10">
+        Generative UI
+      </div>
+      <div ref={containerRef} className="w-full h-full" />
     </div>
   );
 };
@@ -343,6 +371,21 @@ export default function App() {
                   required: ["fact"]
                 }
               }
+            },
+            {
+              type: "function",
+              function: {
+                name: "render_ui",
+                description: "Generate a custom visual UI component (HTML/CSS). If the user says 'Show me', you MUST use this tool to visualize the answer (lists, stats, dashboards, etc.) rather than sending plain text. Create beautiful, self-contained components.",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    html: { type: "string", description: "The self-contained HTML/CSS code for the component." },
+                    caption: { type: "string", description: "A short text companion for the UI." }
+                  },
+                  required: ["html"]
+                }
+              }
             }
           ]
         })
@@ -350,6 +393,7 @@ export default function App() {
 
       const data = await response.json();
       let assistantMsgContent = '';
+      let pendingUiHtml = '';
       
       if (data.usage?.total_tokens) {
          addTokenUsage(user.uid, data.usage.total_tokens);
@@ -376,6 +420,14 @@ export default function App() {
             } catch (e) {
                assistantMsgContent = "Sorry, I encountered a fragment error while saving the memory.";
             }
+         } else if (toolCall.function.name === 'render_ui') {
+            try {
+               const args = JSON.parse(toolCall.function.arguments);
+               assistantMsgContent = args.caption || "I've generated a neural interface for you:";
+               pendingUiHtml = args.html;
+            } catch (e) {
+               assistantMsgContent = "I failed to initialize the visual protocol.";
+            }
          } else {
             assistantMsgContent = data.choices[0].message.content || '[Tool execution completed]';
          }
@@ -394,7 +446,10 @@ export default function App() {
          setIsChatEnded(true);
       }
       
-      const finalMessages = [...newMessages, { role: 'assistant', content: assistantMsgContent }];
+      const assistantMsg = { role: 'assistant', content: assistantMsgContent } as any;
+      if (pendingUiHtml) assistantMsg.uiHtml = pendingUiHtml;
+
+      const finalMessages = [...newMessages, assistantMsg];
       setMessages(finalMessages);
 
       // Handle Firestore Chat Saving & Title Generation
@@ -684,6 +739,7 @@ export default function App() {
                         <div key={idx} className="flex justify-start w-full">
                             <div className={`text-[15px] px-1 max-w-[80%] leading-[1.5] break-words overflow-hidden ${aiText}`}>
                                 <Markdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={{ pre: PreBlock }}>{msg.content}</Markdown>
+                                {(msg as any).uiHtml && <GenerativeUI html={(msg as any).uiHtml} />}
                             </div>
                         </div>
                     )

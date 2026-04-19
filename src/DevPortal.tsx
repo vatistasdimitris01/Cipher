@@ -127,7 +127,7 @@ export default function DevPortal() {
           {activeTab === 'keys' && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                <h1 className="text-3xl font-bold tracking-tight text-black mb-2">API Keys</h1>
-               <p className="text-gray-500 text-sm mb-12 font-light">Mint connection keys to interface with Cipher nodes programmatically. By default, keys are scoped globally with an initial balance pool of $5.00 ($1 = 1,000,000 context tokens).</p>
+               <p className="text-gray-500 text-sm mb-12 font-light">Mint connection keys to interface with Cipher nodes programmatically. By default, keys are scoped globally with an initial balance pool of $5 ($1 = 1,000,000 context tokens).</p>
 
                <div className="bg-gray-50/50 border border-gray-100 rounded-xl p-6 mb-8 relative overflow-hidden">
                  <div className="absolute top-0 right-0 w-64 h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 to-transparent"></div>
@@ -189,7 +189,7 @@ export default function DevPortal() {
                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                        <span className="text-sm text-gray-400 font-semibold tracking-wide uppercase">Remaining Pool</span>
                      </div>
-                     <span className="text-5xl font-bold text-black tracking-tighter relative z-10">${totalBalance.toFixed(4)}</span>
+                     <span className="text-5xl font-bold text-black tracking-tighter relative z-10">${totalBalance % 1 === 0 ? totalBalance.toFixed(0) : totalBalance.toFixed(2)}</span>
                   </div>
                   
                   <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden">
@@ -198,7 +198,7 @@ export default function DevPortal() {
                        <div className="w-2 h-2 rounded-full bg-red-400"></div>
                        <span className="text-sm text-gray-400 font-semibold tracking-wide uppercase">Total Exhausted</span>
                      </div>
-                     <span className="text-5xl font-bold text-black tracking-tighter relative z-10">${Math.max(0, totalSpent).toFixed(4)}</span>
+                     <span className="text-5xl font-bold text-black tracking-tighter relative z-10">${totalSpent % 1 === 0 ? totalSpent.toFixed(0) : totalSpent.toFixed(2)}</span>
                   </div>
                </div>
 
