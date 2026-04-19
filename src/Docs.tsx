@@ -131,35 +131,57 @@ Cipher supports extended agency through MCP. You can connect custom servers expo
   'cli_tool': `
 # Cipher CLI
 
-Run Cipher natively from your terminal. The CLI hooks directly into your OS for seamless script execution, file reading, and logic analysis.
+Run Cipher natively from your OS terminal. The CLI provides a high-performance bridge to the Cipher Protocol, allowing you to synthesize code, analyze logs, and manage neural memory without leaving your workspace.
 
-### Installation
+### Quick Install
 
+**macOS / Linux**:
 \`\`\`bash
-# Clone the open-source CLI registry
-git clone https://github.com/your-username/cipher-cli.git
-cd cipher-cli
-
-# Install dependencies and link the binary
-npm install
-npm link
+curl -fsSL https://raw.githubusercontent.com/vatistasdimitris01/cipher-cli/main/install.sh | bash
 \`\`\`
 
-### Authentication Configuration
-
-Set your environment variables using your minted API key:
-\`\`\`bash
-cipher config set --key "ciph_YOUR_KEY" --host "https://api.cipher.dev"
+**Windows (PowerShell as Admin)**:
+\`\`\`powershell
+iwr -useb https://raw.githubusercontent.com/vatistasdimitris01/cipher-cli/main/install.ps1 | iex
 \`\`\`
 
-### Example Commands
+**Or via NPM**:
+\`\`\`bash
+npm install -g @vatistasdimitris01/cipher-cli
+\`\`\`
+
+### Authentication Logic
+
+1. **Get your link code**:
+   \`\`\`bash
+   cipher login
+   \`\`\`
+   Output: \`Your link code: CIPH-XXXX\`
+
+2. **Verify on Web**:
+   Visit [https://ciphertheai.vercel.app/auth?code=CIPH-XXXX](https://ciphertheai.vercel.app/auth) and click "Confirm".
+
+3. **Auto-handshake**:
+   The CLI will automatically detect the verification, retrieve your secure keys, and establish the link. No manual config required.
+
+### Core Commands
+
+| Command | Description |
+| :--- | :--- |
+| \`cipher chat "prompt"\` | Send a direct query to Cipher |
+| \`cipher login\` | Start the device authorization protocol |
+| \`cipher verify <code>\` | Manually verify a code if polling fails |
+| \`cipher whoami\` | Display current authenticated profile |
+| \`cipher logout\` | Terminate local session and clear keys |
+
+### Usage Example
 
 \`\`\`bash
-# Analyze a file instantly
-cipher "Find the memory leak in this file" < backend.ts
+# Synthesize a script
+cipher chat "Create a python fast-api template with jwt auth"
 
-# Generate complex infrastructure
-cipher generate kubernetes deployment for a nodejs app
+# Analysis pipe
+cat error.log | cipher chat "Analyze these logs for memory leaks"
 \`\`\`
   `,
   'sdk_python': `
