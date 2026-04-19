@@ -30,27 +30,27 @@
   <rect width="1200" height="630" fill="url(#grad3)"/>
   <rect width="1200" height="630" fill="url(#grad4)"/>
 
-  <!-- Content Group: Exactly centered like the reference image -->
+  <!-- Content Group: Perfectly centered pair -->
   <g transform="translate(600, 315)">
-    <!-- Fingerprint Logo (Centered horizontally with text) -->
-    <g transform="translate(-320, -100) scale(8.33)">
-      <path d="M2 12a10 10 0 0 1 13-9.54" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M7 20h.01" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M11 20h.01" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M15 20h.01" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M19 20h.01" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M22 12a10 10 0 0 0-13-9.54" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M12 7a5 5 0 0 0-5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M12 7a5 5 0 0 1 5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M12 11a1 1 0 0 1 1 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M12 11a1 1 0 0 0-1 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M17 12a5 5 0 0 1-5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M7 12a5 5 0 0 0 5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M2 12h.01" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M22 12h.01" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Fingerprint Logo (The one from the header) -->
+    <g transform="translate(-360, -90) scale(7.5)">
+      <path d="M2 12a10 10 0 0 1 13-9.54" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M7 20h.01" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M11 20h.01" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M15 20h.01" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M19 20h.01" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M22 12a10 10 0 0 0-13-9.54" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 7a5 5 0 0 0-5 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 7a5 5 0 0 1 5 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 11a1 1 0 0 1 1 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 11a1 1 0 0 0-1 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 12a5 5 0 0 1-5 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M7 12a5 5 0 0 0 5 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M2 12h.01" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M22 12h.01" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
     
-    <!-- Text -->
-    <text x="-120" y="55" font-family="sans-serif" font-size="160" font-weight="700" letter-spacing="-0.04em" fill="white">Cipher</text>
+    <!-- Text "Cipher" -->
+    <text x="-160" y="55" font-family="'Inter', sans-serif" font-size="160" font-weight="700" letter-spacing="-0.04em" fill="white">Cipher</text>
   </g>
 </svg>
