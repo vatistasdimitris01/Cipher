@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 const OPENCODE_API_KEY = "sk-jLHTSQp8VGF9nN7oRAFlqyrfCxB8moyPIDtS0S1V1MCaFrV9LVR3KBtQVmxqk6PY";
