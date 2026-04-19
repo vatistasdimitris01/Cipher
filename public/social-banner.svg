@@ -47,10 +47,22 @@
 
   <!-- Content Group: Exactly centered like the reference image -->
   <g transform="translate(600, 315)">
-    <!-- Logo (Shifted left to accommodate text) -->
-    <use href="#fingerprint" x="-320" y="-80" width="160" height="160" color="white" />
+    <!-- Logo (Inlined path for maximum compatibility) -->
+    <g transform="translate(-320, -80) scale(6.666)">
+      <path d="M2 12C2 12.1 2.1 12.2 2.2 12.2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M7 2V3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M15 3V2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8 21C10.5 21 12.5 19 12.5 16.5C12.5 15.5 13.3 14.7 14.3 14.7C15.3 14.7 16.2 15.6 16.2 16.6C16.2 19 18.2 21 20.7 21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 21C17.1 21 17.2 20.9 17.2 20.8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M22 12C22 12.1 21.9 12.2 21.8 12.2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M7 21C4.5 21 2.5 19 2.5 16.5C2.5 15.5 1.7 14.7 0.7 14.7C-0.3 14.7 -1.2 15.6 -1.2 16.6C-1.2 19 -3.2 21 -5.7 21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(10,0)"/>
+      <path d="M12 22V20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M18 10.1C18 14.5 14.4 18.1 10 18.1C8.6 18.1 7.2 17.7 6.1 17C4.8 16.2 4 14.7 4 13.1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5 4.9C5.9 4.3 7 4 8.1 4C11.4 4 14.1 6.7 14.1 10C14.1 11.1 13.8 12.2 13.2 13.1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M11 10.1C11 11.2 10.1 12.1 9 12.1C7.9 12.1 7 11.2 7 10.1C7 8.4 8.3 7.1 10 7.1C11.7 7.1 13 8.4 13 10.1C13 11.8 14.3 13.1 16 13.1C17.7 13.1 19 11.8 19 10.1C19 5.1 15 1.1 10 1.1C5 1.1 1 5.1 1 10.1C1 11.8 2.3 13.1 4 13.1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
     
-    <!-- Text (Centered relative to the pair) -->
-    <text x="-140" y="55" font-family="'Inter', -apple-system, sans-serif" font-size="160" font-weight="700" letter-spacing="-0.04em" fill="white">Cipher</text>
+    <!-- Text -->
+    <text x="-140" y="55" font-family="sans-serif" font-size="160" font-weight="700" letter-spacing="-0.04em" fill="white">Cipher</text>
   </g>
 </svg>
