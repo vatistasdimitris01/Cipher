@@ -1229,6 +1229,17 @@ const AppRoot = () => {
   const [signing,   setSigning]   = useState(false);
 
   useEffect(()=>{
+    // Handle redirect result first (fires after Google redirects back)
+    auth.getRedirectResult().then(result => {
+      if (result?.user) setSigning(false);
+    }).catch(err => {
+      if(err.code === "auth/unauthorized-domain")
+        setAuthError("This domain isn't authorised in Firebase. Add ciphertheai.vercel.app to Firebase → Authentication → Settings → Authorized domains.");
+      else
+        setAuthError("Sign-in failed (" + (err.code || err.message) + "). Please try again.");
+      setSigning(false);
+    });
+
     const unsub = auth.onAuthStateChanged(async u => {
       if(u) {
         try { await FS.ensureUser(u); } catch {}
@@ -1246,15 +1257,10 @@ const AppRoot = () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.addScope("email");
       provider.addScope("profile");
-      const result = await auth.signInWithPopup(provider);
-      if(!result.user) throw new Error("no_user");
+      // redirect avoids COOP/popup issues with Google's auth page
+      await auth.signInWithRedirect(provider);
     } catch(err) {
-      if(err.code === "auth/popup-blocked")
-        setAuthError("Popup blocked — please allow popups for this site, then try again.");
-      else if(err.code === "auth/unauthorized-domain")
-        setAuthError("This domain isn't authorised in Firebase. Add ciphertheai.vercel.app to Firebase → Authentication → Settings → Authorized domains.");
-      else if(err.code !== "auth/popup-closed-by-user")
-        setAuthError("Sign-in failed (" + (err.code || err.message) + "). Please try again.");
+      setAuthError("Sign-in failed (" + (err.code || err.message) + "). Please try again.");
       setSigning(false);
     }
   };
