@@ -1,0 +1,63 @@
+@import "tailwindcss";
+@import 'katex/dist/katex.min.css';
+
+@theme {
+  --color-pitch-black: #080808;
+  --color-cipher-grey: #1a1a1a;
+  --color-cipher-border: #242424;
+  --animate-shimmer: shimmer 2.5s infinite linear;
+  @keyframes shimmer {
+    0% { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+}
+
+html, body {
+  background-color: #080808;
+  color: #ececec;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+@layer utilities {
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+
+    .markdown-body pre {
+      background-color: #1e1e1e !important;
+      color: #d4d4d4 !important;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+  
+    .markdown-body code {
+      background-color: rgba(128, 128, 128, 0.2);
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.875em;
+      font-family: monospace;
+    }
+    
+    .markdown-body pre code {
+      background-color: transparent;
+      padding: 0;
+    }
+  
+    .markdown-body p {
+      margin-bottom: 0.5rem;
+    }
+    
+    .markdown-body p:last-child {
+      margin-bottom: 0;
+    }
+}
