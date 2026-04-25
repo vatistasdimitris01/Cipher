@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import firebase, { db, auth } from './firebase.js';
+import { db, auth, firebase, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from './firebase.js';
 import '../styles.css';
 
 window.katex = katex;
@@ -1186,7 +1186,7 @@ const App = ({ user }) => {
   };
 
   const newChat = () => { setMessages([]); setChatId(null); setPage("chat"); };
-  const handleLogout = () => { auth.signOut(); };
+  const handleLogout = () => signOut(auth);
   const handleDeleteAll = () => { setMessages([]); setChatId(null); };
 
   if(page==="mcp") return (
@@ -1228,41 +1228,43 @@ const AppRoot = () => {
   const [authError, setAuthError] = useState(null);
   const [signing,   setSigning]   = useState(false);
 
-  useEffect(()=>{
-    // Handle redirect result first (fires after Google redirects back)
-    auth.getRedirectResult().then(result => {
-      if (result?.user) setSigning(false);
-    }).catch(err => {
-      if(err.code === "auth/unauthorized-domain")
-        setAuthError("This domain isn't authorised in Firebase. Add ciphertheai.vercel.app to Firebase → Authentication → Settings → Authorized domains.");
-      else
-        setAuthError("Sign-in failed (" + (err.code || err.message) + "). Please try again.");
-      setSigning(false);
-    });
+  useEffect(() => {
+    // Pick up the result when Google redirects back to the app
+    getRedirectResult(auth)
+      .then(result => { if (result?.user) setSigning(false); })
+      .catch(err => {
+        const msg = err.code === "auth/unauthorized-domain"
+          ? "Domain not authorised — add ciphertheai.vercel.app in Firebase Console → Authentication → Authorized domains."
+          : "Sign-in failed: " + (err.code || err.message);
+        setAuthError(msg);
+        setSigning(false);
+      });
 
-    const unsub = auth.onAuthStateChanged(async u => {
-      if(u) {
-        try { await FS.ensureUser(u); } catch {}
-        setFbUser(u); setAuthState("loggedIn");
+    // Watch auth state
+    const unsub = onAuthStateChanged(auth, async u => {
+      if (u) {
+        try { await FS.ensureUser(u); } catch (_) {}
+        setFbUser(u);
+        setAuthState("loggedIn");
       } else {
-        setFbUser(null); setAuthState("loggedOut");
+        setFbUser(null);
+        setAuthState("loggedOut");
       }
     });
     return () => unsub();
-  },[]);
+  }, []);
 
-  const signIn = async () => {
-    setSigning(true); setAuthError(null);
-    try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      provider.addScope("email");
-      provider.addScope("profile");
-      // redirect avoids COOP/popup issues with Google's auth page
-      await auth.signInWithRedirect(provider);
-    } catch(err) {
-      setAuthError("Sign-in failed (" + (err.code || err.message) + "). Please try again.");
+  const signIn = () => {
+    setSigning(true);
+    setAuthError(null);
+    const provider = new GoogleAuthProvider();
+    provider.addScope("email");
+    provider.addScope("profile");
+    // Redirect avoids COOP popup issues entirely
+    signInWithRedirect(auth, provider).catch(err => {
+      setAuthError("Could not start sign-in: " + (err.code || err.message));
       setSigning(false);
-    }
+    });
   };
 
   if(authState==="loading")   return <LoadingScreen/>;
