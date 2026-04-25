@@ -1,58 +1,29 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cipher</title>
-    
-    <!-- Primary Meta Tags -->
-    <meta name="title" content="Cipher Intelligence | Premium Neural Protocol" />
-    <meta name="description" content="Cipher Intelligence is a high-performance conversational AI protocol. Access specialized nodes for deep reasoning, mathematical simulation, and edge-logic requests." />
-    <meta name="keywords" content="Cipher Intelligence, AI Protocol, Neural Vault, Dimitris Vatistas, Premium AI, Cipher Prime, Cipher Oracle" />
-    <meta name="author" content="Cipher Intelligence" />
-    <meta name="theme-color" content="#ffffff" />
+<html lang="en" data-theme="dark" data-accent="graphite" data-font="sans" data-density="cozy" data-bubble="pill">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Cipher</title>
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://ciphertheai.vercel.app/" />
-    <meta property="og:site_name" content="Cipher Intelligence" />
-    <meta property="og:title" content="Cipher Intelligence | Premium Neural Protocol" />
-    <meta property="og:description" content="A high-performance conversational AI protocol designed for raw logic and inference speed." />
-    <meta property="og:image" content="https://ciphertheai.vercel.app/social-banner.svg" />
-    <meta property="og:image:secure_url" content="https://ciphertheai.vercel.app/social-banner.svg" />
-    <meta property="og:image:type" content="image/svg+xml" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+  <!-- SEO -->
+  <meta name="description" content="Cipher — your AI workspace. Fast, private, and beautifully designed." />
+  <meta name="theme-color" content="#0a0a0a" />
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://ciphertheai.vercel.app/" />
-    <meta property="twitter:title" content="Cipher Intelligence | Premium Neural Protocol" />
-    <meta property="twitter:description" content="A high-performance conversational AI protocol designed for raw logic and inference speed." />
-    <meta property="twitter:image" content="https://ciphertheai.vercel.app/social-banner.svg" />
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/favicon.svg" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
-    <!-- PWA Installation -->
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => {
-             console.log('Service Worker failed to setup.', err);
-          });
-        });
-      }
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
 </html>
-
