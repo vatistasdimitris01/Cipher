@@ -1,21 +1,15 @@
 {
-  "buildCommand": "",
-  "outputDirectory": ".",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/zen/v1/:path*", "destination": "/api/zen" },
-    { "source": "/",              "destination": "/Cipher.html" }
+    { "source": "/(.*)",          "destination": "/index.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
         { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
-      ]
-    },
-    {
-      "source": "/(.*)\\.jsx",
-      "headers": [
-        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" }
       ]
     }
   ]
