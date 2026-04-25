@@ -297,13 +297,62 @@ async function startServer() {
     }
   }
 
+  // --- PROXY FOR CIPHER API (Streaming supported) ---
+  app.post("/zen/v1/chat/completions", async (req, res) => {
+    const apiKey = process.env.OPENCODE_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "OPENCODE_API_KEY is not configured." });
+    }
+
+    try {
+      const response = await fetch("https://opencode.ai/zen/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(req.body)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return res.status(response.status).json(errorData);
+      }
+
+      // If streaming, pipe the response
+      if (req.body.stream) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        
+        // Pipe the body
+        const reader = response.body?.getReader();
+        if (!reader) {
+           return res.status(500).json({ error: "Failed to get reader from upstream." });
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(value);
+        }
+        res.end();
+      } else {
+        const data = await response.json();
+        res.json(data);
+      }
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Internal UI Endpoint
   app.post("/api/chat", async (req, res) => await processChat(req, res));
 
   // Developer Endpoints
   app.post("/api/v1/chat", async (req, res) => await processChat(req, res));
   app.post("/api/v1/cipher-node", async (req, res) => await processChat(req, res, 'minimax-m2.5-free'));
-  app.post("/api/v1/cipher-oracle", async (req, res) => await processChat(req, res, 'deepseek-r1-free'));
+  app.post("/api/v1/cipher-oracle", async (req, res) => await processChat(req, res, 'gpt-4o-mini-free'));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

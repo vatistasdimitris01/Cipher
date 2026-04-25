@@ -19,6 +19,17 @@ service cloud.firestore {
       
       match /chats/{chatId} {
         allow read, write: if isOwner(userId);
+        match /messages/{msgId} {
+          allow read, write: if isOwner(userId);
+        }
+      }
+      
+      match /sessions/{sessId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /mcpServers/{serverId} {
+        allow read, write: if isOwner(userId);
       }
       
       match /memory/{memoryId} {
