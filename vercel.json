@@ -4,13 +4,5 @@
   "rewrites": [
     { "source": "/zen/v1/:path*", "destination": "/api/zen" },
     { "source": "/(.*)",          "destination": "/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
-      ]
-    }
   ]
 }
