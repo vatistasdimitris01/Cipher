@@ -399,12 +399,25 @@ const TopBar = ({ onHistory, onNewChat, onSettings, onHome, inChat }: any) => (
 );
 
 // --- Composer ---
-const Composer = ({ onSend, disabled, variant="bottom", sendOnEnter=true, outOfCredits=false }: any) => {
+const Composer = ({ onSend, onStop, disabled, variant="bottom", sendOnEnter=true, outOfCredits=false }: any) => {
   const [val, setVal] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
   useEffect(()=>{ const el=taRef.current; if(!el)return; el.style.height="auto"; el.style.height=Math.min(el.scrollHeight,208)+"px"; },[val]);
-  const send = () => { const t=val.trim(); if(!t||disabled||outOfCredits)return; onSend(t); setVal(""); };
-  const multiline = val.includes("\n");
+  
+  const send = () => { 
+    const t = val.trim(); 
+    if(!t||disabled||outOfCredits) return; 
+    
+    // Check for "large" text (e.g. > 10 lines)
+    const lines = t.split('\n').length;
+    let displayContent = t;
+    if (lines > 10) {
+      displayContent = `Pasted ${lines} lines of text`;
+    }
+    
+    onSend(t, displayContent); 
+    setVal(""); 
+  };
   
   const timeUntilMidnight = () => {
     const now = new Date();
@@ -436,9 +449,9 @@ const Composer = ({ onSend, disabled, variant="bottom", sendOnEnter=true, outOfC
             }
           }}
         />
-        <button className="send" onClick={send} aria-label="Send" disabled={disabled||outOfCredits||!val.trim()}
+        <button className="send" onClick={disabled ? onStop : send} aria-label={disabled ? "Stop" : "Send"} disabled={outOfCredits||(!val.trim()&&!disabled)}
           style={{ transition: "all 200ms ease" }}>
-          <Icon name="arrowUp" size={16} stroke={2.2}/>
+          {disabled ? <Icon name="stop" size={16} stroke={2}/> : <Icon name="arrowUp" size={16} stroke={2.2}/>}
         </button>
       </div>
       <div className="composer-hint">
@@ -1146,8 +1159,17 @@ const CipherApp = ({ user }: { user: User }) => {
   const [histOpen, setHistOpen] = useState(false);
   const [settOpen, setSettOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const uid = user.uid;
+
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+        setBusy(false);
+    }
+  }
 
   const welcomeMessage = useMemo(() => {
     const firstName = userData?.firstName || user?.displayName?.split(" ")[0] || "User";
@@ -1225,10 +1247,11 @@ const CipherApp = ({ user }: { user: User }) => {
     if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   },[messages]);
 
-  const send = async (text: string) => {
-    const userMsg = { role:"user", content:text, id:Date.now() };
+  const send = async (text: string, displayContent?: string) => {
+    const userMsg = { role:"user", content: displayContent || text, id:Date.now() };
     const aiId = Date.now()+1;
-    const prevMsgs = messages;
+    
+    // UI updates immediately
     setMessages(p => [...p, userMsg, {role:"ai",thinking:true,id:aiId}]);
     setBusy(true);
 
@@ -1239,6 +1262,11 @@ const CipherApp = ({ user }: { user: User }) => {
     }
     await FS.saveMsg(uid, cid, "user", text);
 
+    // Create an abort controller for this specific request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const signal = controller.signal;
+    
     try {
       const mcpSnap = await getDocs(FS.mcpRef(uid));
       const mcpServers = mcpSnap.docs.map(d => d.data() as any);
@@ -1263,7 +1291,7 @@ const CipherApp = ({ user }: { user: User }) => {
 
       const msgsForApi = [
         systemMsg,
-        ...prevMsgs.filter(m => !m.thinking).map(m => ({ role: m.role==='ai'?'assistant':'user', content: m.content })),
+        ...messages.filter(m => !m.thinking).map(m => ({ role: m.role==='ai'?'assistant':'user', content: m.content })),
         { role: 'user', content: text }
       ];
       
@@ -1274,7 +1302,8 @@ const CipherApp = ({ user }: { user: User }) => {
           model: "nemotron-3-super-free",
           messages: msgsForApi,
           stream: true
-        })
+        }),
+        signal
       });
 
       if(!res.ok) throw new Error("api_fail");
@@ -1300,7 +1329,6 @@ const CipherApp = ({ user }: { user: User }) => {
                 if (!hasStarted) {
                   hasStarted = true;
                   content = delta;
-                  // Remove thinking state only when first content arrives
                   setMessages(p => p.map(m => m.id===aiId ? {role:"ai",id:aiId,content} : m));
                 } else {
                   content += delta;
@@ -1313,7 +1341,6 @@ const CipherApp = ({ user }: { user: User }) => {
       }
       
       if (!hasStarted) {
-        // If the stream ended without any tokens (error or empty response)
         setMessages(p => p.map(m => m.id===aiId ? {role:"ai",id:aiId,content:"No response received."} : m));
       }
       
@@ -1321,9 +1348,14 @@ const CipherApp = ({ user }: { user: User }) => {
       const estTokens = (content.length + text.length) * 1.5 + 50; 
       FS.deductCredit(uid, Math.ceil(estTokens));
     } catch(err) {
-      setMessages(p => p.map(m => m.id===aiId ? {role:"ai",id:aiId,content:"Connection error. Please try again."} : m));
+      if (err.name === 'AbortError') {
+         // User stopped generation
+      } else {
+        setMessages(p => p.map(m => m.id===aiId ? {role:"ai",id:aiId,content:"Connection error. Please try again."} : m));
+      }
     } finally { setBusy(false); }
   };
+
 
   const loadChat = async (cid: string) => {
     setChatId(cid);
@@ -1351,11 +1383,11 @@ const CipherApp = ({ user }: { user: User }) => {
         <div className="empty" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '30px', animation: 'riseIn 500ms ease' }}>
           <h1 className="empty-title">{welcomeMessage}</h1>
         </div>
-        <Composer onSend={send} disabled={busy} outOfCredits={outOfCredits} variant="center" sendOnEnter={prefs.sendOnEnter} />
+        <Composer onSend={send} onStop={stopGeneration} disabled={busy} outOfCredits={outOfCredits} variant="center" sendOnEnter={prefs.sendOnEnter} />
       </div>
 
       {!empty && (
-        <Composer onSend={send} disabled={busy} outOfCredits={outOfCredits} variant="bottom" sendOnEnter={prefs.sendOnEnter} />
+        <Composer onSend={send} onStop={stopGeneration} disabled={busy} outOfCredits={outOfCredits} variant="bottom" sendOnEnter={prefs.sendOnEnter} />
       )}
 
       <HistoryModal open={histOpen} onClose={() => setHistOpen(false)} uid={uid} onPick={loadChat} />
