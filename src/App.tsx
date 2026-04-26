@@ -1198,6 +1198,21 @@ const CipherApp = ({ user }: { user: User }) => {
     return () => unsub();
   },[uid]);
 
+  useEffect(() => {
+    if (!uid) return;
+    let initialized = false;
+    const unsubSess = onSnapshot(FS.sessRef(uid), snap => {
+      if (snap.exists()) {
+        initialized = true;
+      } else if (initialized) {
+        signOut(auth).catch(() => {});
+      }
+    });
+    return () => unsubSess();
+  }, [uid]);
+
+  useEffect(()=>{ applyPrefs(prefs); },[prefs]);
+
   useEffect(()=>{ applyPrefs(prefs); },[prefs]);
 
   const setPrefs = useCallback((changes: any) => {
