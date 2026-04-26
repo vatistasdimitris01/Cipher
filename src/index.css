@@ -154,7 +154,7 @@ input, textarea { font: inherit; color: inherit; }
   transition: background 140ms ease;
 }
 .brand:hover { background: var(--bg-hover); }
-.logo { color: var(--fg); }
+.logo { color: var(--fg); display: block; margin: 0 auto; }
 
 .icon-btn {
   width: 34px; height: 34px;
